@@ -7,7 +7,7 @@ import {RocketDepositPoolInterface} from "./Vendors/RocketPool/RocketDepositPool
 // import {RocketTokenRETHInterface} from "./Vendors/RocketPool/RocketTokenRETHInterface.sol";
 import {IOracle} from "./IOracle.sol";
 
-contract RPLVault is ERC20 {
+contract RPLVault is IVault, ERC20 {
     address public immutable depositPool;
     address public immutable lpToken;
 
