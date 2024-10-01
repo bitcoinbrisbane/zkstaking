@@ -17,7 +17,7 @@ contract LiqidityManger is Ownable {
     address[] public pools;
 
     function deposit(uint256 poolId) external payable {
-        require(poolId < pools.length, "Invalid pool id");
+        require(poolId < pools.length, "LM: Invalid pool id");
         poolBalances[poolId][msg.sender] += msg.value;
         totalFunds += msg.value;
         unallocatedFunds += msg.value;
@@ -26,7 +26,7 @@ contract LiqidityManger is Ownable {
     }
 
     function withdraw(uint256 poolId, uint256 amount) external {
-        require(poolId < pools.length, "Invalid pool id");
+        require(poolId < pools.length, "LM: Invalid pool id");
         require(poolBalances[poolId][msg.sender] >= amount, "Insufficient funds");
 
         poolBalances[poolId][msg.sender] -= amount;

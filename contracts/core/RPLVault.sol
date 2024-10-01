@@ -8,7 +8,7 @@ import {RocketDepositPoolInterface} from "./Vendors/RocketPool/RocketDepositPool
 import {IOracle} from "./IOracle.sol";
 
 contract RPLVault is IVault, ERC20 {
-    address public immutable depositPool;
+    // address public immutable depositPool;
     address public immutable lpToken;
 
     address private immutable _oracle;
@@ -32,9 +32,11 @@ contract RPLVault is IVault, ERC20 {
         _oracle = _oracleAddress;
     }
 
-    function deposit() external payable {
+    function deposit(uint256 amount) external payable {
         // Check deposit amount
         require(msg.value > 0, "Invalid deposit amount");
+        require(msg.value == amount, "Invalid deposit amount");
+
         // Load contracts
         address rocketDepositPoolAddress = rocketStorage.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
@@ -59,11 +61,12 @@ contract RPLVault is IVault, ERC20 {
 
         require(rethBalance2 > rethBalance1, "No rETH was minted");
         uint256 rethMinted = rethBalance2 - rethBalance1;
+        
         // Update user's balance
         balances[msg.sender] += rethMinted;
     }
 
-    function withdraw() external {
+    function withdraw(uint256 amount) external {
         // Load contracts
         address rocketTokenRETHAddress = rocketStorage.getAddress(
             keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
@@ -71,9 +74,16 @@ contract RPLVault is IVault, ERC20 {
         RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
             rocketTokenRETHAddress
         );
+
+        require(
+            balances[msg.sender] >= amount,
+            "Insufficient rETH balance to withdraw"
+        );
+
         // Transfer rETH to caller
         uint256 balance = balances[msg.sender];
-        balances[msg.sender] = 0;
+        balances[msg.sender] -= amount;
+
         require(
             rocketTokenRETH.transfer(msg.sender, balance),
             "rETH was not transferred to caller"
