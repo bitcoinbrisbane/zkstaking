@@ -2,10 +2,12 @@
 pragma solidity ^0.8.27;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {RocketStorageInterface} from "./Vendors/RocketPool/RocketStorageInterface.sol";
-import {RocketDepositPoolInterface} from "./Vendors/RocketPool/RocketDepositPoolInterface.sol";
-// import {RocketTokenRETHInterface} from "./Vendors/RocketPool/RocketTokenRETHInterface.sol";
-import {IOracle} from "./IOracle.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {RocketStorageInterface} from "../vendors/RocketPool/RocketStorageInterface.sol";
+import {RocketDepositPoolInterface} from "../vendors/RocketPool/RocketDepositPoolInterface.sol";
+import {RocketTokenRETHInterface} from "../vendors/RocketPool/RocketTokenRETHInterface.sol";
+import {IOracle} from "../IOracle.sol";
+import {IVault} from "../IVault.sol";
 
 contract RPLVault is IVault, ERC20 {
     // address public immutable depositPool;
@@ -24,6 +26,10 @@ contract RPLVault is IVault, ERC20 {
 
     function getOracle() external view returns (address) {
         return _oracle;
+    }
+
+    function balance() external view returns (uint256) {
+        return IERC20(lpToken).balanceOf(address(this));
     }
 
     constructor(address _rocketStorageAddress, address _oracleAddress) {

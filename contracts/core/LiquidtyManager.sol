@@ -2,10 +2,11 @@
 pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IVault} from "../IVault.sol";
 
-contract LiqidityManger is Ownable {
+contract LiqidityManger is ERC20, Ownable {
 
     uint256 public unallocatedFunds;
     uint256 public allocatedFunds;
@@ -18,9 +19,13 @@ contract LiqidityManger is Ownable {
 
     function deposit(uint256 poolId) external payable {
         require(poolId < pools.length, "LM: Invalid pool id");
+        require(pools[poolId] != address(0), "LM: Pool not found");
+
         poolBalances[poolId][msg.sender] += msg.value;
         totalFunds += msg.value;
         unallocatedFunds += msg.value;
+
+        IVault(pools[poolId]).deposit{value: msg.value}();
 
         emit Deposit(msg.sender, msg.value);
     }
