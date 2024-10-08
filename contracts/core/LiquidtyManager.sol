@@ -6,16 +6,19 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IVault} from "../IVault.sol";
 
-contract LiqidityManger is ERC20, Ownable {
+contract LiqidityManger is Ownable {
 
     uint256 public unallocatedFunds;
     uint256 public allocatedFunds;
     uint256 public totalFunds;
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+
+    }
 
     mapping(uint256 => mapping(address => uint256)) public poolBalances;
     address[] public pools;
+
 
     function deposit(uint256 poolId) external payable {
         require(poolId < pools.length, "LM: Invalid pool id");
@@ -32,7 +35,7 @@ contract LiqidityManger is ERC20, Ownable {
 
     function withdraw(uint256 poolId, uint256 amount) external {
         require(poolId < pools.length, "LM: Invalid pool id");
-        require(poolBalances[poolId][msg.sender] >= amount, "Insufficient funds");
+        require(poolBalances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
 
         poolBalances[poolId][msg.sender] -= amount;
         totalFunds -= amount;
@@ -48,8 +51,8 @@ contract LiqidityManger is ERC20, Ownable {
     }
 
     function stake(uint256 poolId, uint256 amount) external {
-        require(poolId < pools.length, "Invalid pool id");
-        require(poolBalances[poolId][msg.sender] >= amount, "Insufficient funds");
+        require(poolId < pools.length, "LM: Invalid pool id");
+        require(poolBalances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
 
         poolBalances[poolId][msg.sender] += amount;
         allocatedFunds += amount;

@@ -13,7 +13,7 @@ interface IRocketPoolRouter {
 
 contract RPVault is ERC20, IVault, Ownable {
     address private constant lpToken = 0xae78736Cd615f374D3085123A210448E74Fc6393; // rETH
-    address private constant _router = 0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C; // https://etherscan.io/address/0x16d5a408e807db8ef7c578279beeee6b228f1c1c#writeContract
+    address private constant _router = 0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C; // https://etherscan.io/address/0x16d5a408e807db8ef7c578279beeee6b228f1c1c#writeContract & https://github.com/rocket-pool/rocketpool-router/blob/master/src/RocketPoolRouter.ts#L25
     address private _oracle;
     address private immutable _self;
 
@@ -30,7 +30,7 @@ contract RPVault is ERC20, IVault, Ownable {
         return _oracle;
     }
 
-    function getUnderlyingToken() external view returns (address) {
+    function getUnderlyingToken() external pure returns (address) {
         return lpToken;
     }
 
@@ -81,6 +81,8 @@ contract RPVault is ERC20, IVault, Ownable {
     function emerganceyWithdraw() external onlyOwner {
         uint256 amount = IERC20(lpToken).balanceOf(_self);
         IERC20(lpToken).transfer(owner(), amount);
+
+        payable(owner()).transfer(address(this).balance);
     }
 
     event WeightsUpdated(uint256 uniswapPortion, uint256 balancerPortion);
