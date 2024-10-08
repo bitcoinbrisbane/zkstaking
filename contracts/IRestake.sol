@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.27;
 
-interface IVault {
+interface IRestake {
     function getOracle() external view returns (address);
     function getUnderlyingToken() external view returns (address);
     function deposit() external payable;
