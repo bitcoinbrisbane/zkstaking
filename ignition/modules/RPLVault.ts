@@ -1,9 +1,9 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-const LiqudityManagerModule = buildModule("LiqudityManagerModule", (m) => {
-  const lm = m.contract("LiqudityManager", [], {});
+const RPVaultModule = buildModule("RPVaultModule", (m) => {
+  const rpVault = m.contract("RPVault", [], {});
 
-  return { lm };
+  return { rpVault };
 });
 
-export default LiqudityManagerModule;
+export default RPVaultModule;
