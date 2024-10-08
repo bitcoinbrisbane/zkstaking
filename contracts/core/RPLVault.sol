@@ -2,19 +2,15 @@
 pragma solidity ^0.8.27;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {RocketStorageInterface} from "./Vendors/RocketPool/RocketStorageInterface.sol";
-import {RocketDepositPoolInterface} from "./Vendors/RocketPool/RocketDepositPoolInterface.sol";
-import {RocketTokenRETHInterface} from "./Vendors/RocketPool/RocketTokenRETHInterface.sol";
-import {IOracle} from "./IOracle.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IOracle} from "../IOracle.sol";
+import {IVault} from "../IVault.sol";
+import {IRocketPoolRouter} from "../vendor/RocketPool/IRocketPoolRouter.sol";
 
-interface IRocketPoolRouter {
-    function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external payable;
-}
-
-contract RPVault is IVault, ERC20 {
-    address private constant lpToken = 0xae78736cd615f374d3085123a210448e74fc6393;
-    address private immutable _router;
-    address private immutable _oracle;
+contract RPVault is IVault, ERC20, Ownable {
+    address private constant lpToken = 0xae78736cd615f374d3085123a210448e74fc6393; // rETH
+    address private constant _router = 0x16d5a408e807db8ef7c578279beeee6b228f1c1c; // https://etherscan.io/address/0x16d5a408e807db8ef7c578279beeee6b228f1c1c#writeContract
+    address private _oracle;
     address private immutable _self;
 
     uint256 public uniswapPortion;
@@ -22,15 +18,16 @@ contract RPVault is IVault, ERC20 {
 
     mapping(address => uint256) balances;
 
-    // router address
-    RocketStorageInterface rocketStorage;
-
     function getUnderlyingToken() external view returns (address) {
         return lpToken;
     }
 
     function getOracle() external view returns (address) {
         return _oracle;
+    }
+
+    function setOracle(address oracle) external onlyOwner {
+        _oracle = oracle;
     }
 
     function setWeight(uint256 _uniswapPortion, uint256 _balancerPortion) external onlyOwner {
@@ -42,9 +39,9 @@ contract RPVault is IVault, ERC20 {
         emit WeightsUpdated(uniswapPortion, balancerPortion);
     }
 
-    constructor(address _oracleAddress, address _router) ERC20("Rocket Pool Liquidity Token", "rPL") {
-        _router = _router;
-        _oracle = _oracleAddress;
+    constructor() ERC20("Rocket Pool Liquidity Token", "rPL") {
+        uniswapPortion = 50;
+        balancerPortion = 50;
         _self = address(this);
     }
 
@@ -56,64 +53,6 @@ contract RPVault is IVault, ERC20 {
 
         emit Deposit(msg.sender, msg.value);
     }
-
-    // function deposit(uint256 amount) external payable {
-    //     // Check deposit amount
-    //     require(msg.value > 0, "Invalid deposit amount");
-    //     require(msg.value == amount, "Invalid deposit amount");
-
-    //     // Load contracts
-    //     address rocketDepositPoolAddress = rocketStorage.getAddress(
-    //         keccak256(abi.encodePacked("contract.address", "rocketDepositPool"))
-    //     );
-
-    //     RocketDepositPoolInterface rocketDepositPool = RocketDepositPoolInterface(
-    //             rocketDepositPoolAddress
-    //         );
-
-    //     address rocketTokenRETHAddress = rocketStorage.getAddress(
-    //         keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
-    //     );
-
-    //     RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-    //         rocketTokenRETHAddress
-    //     );
-
-    //     // Forward deposit to RP & get amount of rETH minted
-    //     uint256 rethBalance1 = rocketTokenRETH.balanceOf(_self);
-    //     rocketDepositPool.deposit{value: msg.value}();
-    //     uint256 rethBalance2 = rocketTokenRETH.balanceOf(_self);
-
-    //     require(rethBalance2 > rethBalance1, "No rETH was minted");
-    //     uint256 rethMinted = rethBalance2 - rethBalance1;
-        
-    //     // Update user's balance
-    //     balances[msg.sender] += rethMinted;
-    // }
-
-    // function withdraw(uint256 amount) external {
-    //     // Load contracts
-    //     address rocketTokenRETHAddress = rocketStorage.getAddress(
-    //         keccak256(abi.encodePacked("contract.address", "rocketTokenRETH"))
-    //     );
-    //     RocketTokenRETHInterface rocketTokenRETH = RocketTokenRETHInterface(
-    //         rocketTokenRETHAddress
-    //     );
-
-    //     require(
-    //         balances[msg.sender] >= amount,
-    //         "Insufficient rETH balance to withdraw"
-    //     );
-
-    //     // Transfer rETH to caller
-    //     uint256 balance = balances[msg.sender];
-    //     balances[msg.sender] -= amount;
-
-    //     require(
-    //         rocketTokenRETH.transfer(msg.sender, balance),
-    //         "rETH was not transferred to caller"
-    //     );
-    // }
 
     function getLatestPrice() external view returns (int) {
         IOracle oracle = IOracle(_oracle);
