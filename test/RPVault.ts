@@ -4,7 +4,17 @@ import {
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import { expect } from "chai";
+import { Contract, Wallet } from "ethers";
 import hre, { network } from "hardhat";
+
+const MAINNET_ROCKET_STORAGE = "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46";
+const MAINNET_WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+const MAINNET_RETH = "0xae78736cd615f374d3085123a210448e74fc6393";
+const MAINNET_UNISWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
+const MAINNET_UNISWAP_QUOTER = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6";
+const MAINNET_BALANCER_VAULT = "0xba12222222228d8ba445958a75a0704d566bf2c8";
+
+const privateKey = process.env.PRIVATE_KEY || "";
 
 describe("RPLVault", function () {
   // We define a fixture to reuse the same setup in every test.
@@ -19,26 +29,96 @@ describe("RPLVault", function () {
     // Get whale account to impersonate
     const vitalik_address = "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B";
 
-    //  impersonating vitalik's account
+    // Impersonating vitalik's account
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [vitalik_address],
     });
 
-    //   make vitalik the signer
-    const signer = await hre.ethers.getSigner(vitalik_address);
+    // Make vitalik the signer
+    const vitalik = await hre.ethers.getSigner(vitalik_address);
+
+    // Check the balance of the account
+    const balance = await hre.ethers.provider.getBalance(vitalik_address);
+    console.log(balance);
 
     const RPVault = await hre.ethers.getContractFactory("RPVault");
     const vault = await RPVault.deploy();
 
-    return { vault, owner, otherAccount };
+    const provider = hre.ethers.provider;
+
+    const wallet = new Wallet(privateKey, provider);
+
+    return { vault, owner, vitalik, otherAccount, provider, wallet };
   }
 
-  describe("Deployment", function () {
-    it("Should setup the vault", async function () {
+  describe("Test swaps on RPL router", function () {
+    // async function getRethBalance(address: string) {
+    //   const contract = new hre.ethers.Contract(
+    //     MAINNET_RETH,
+    //     ["function balanceOf(address) external view returns (uint256)"],
+    //     provider
+    //   );
+    //   return await contract.balanceOf(address);
+    // }
+
+    it.only("Should optimise a swap", async () => {
+      const provider = hre.ethers.provider;
+      console.log(provider);
+
+      const [owner, otherAccount] = await hre.ethers.getSigners();
+
+      const abi = [
+        "function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external payable",
+      ];
+
+      const contract = new Contract(
+        "0x16d5a408e807db8ef7c578279beeee6b228f1c1c",
+        abi,
+        provider
+      );
+
+      const contract2 = new hre.ethers.Contract(
+        MAINNET_RETH,
+        ["function balanceOf(address) external view returns (uint256)"],
+        provider
+      );
+
+      const balance_before = await contract2.balanceOf(owner.address);
+      console.log(balance_before);
+
+      // Do a swap
+      await contract.connect(owner).swapTo(50, 50, 100, 100, {
+        value: 1000000000000000000n,
+      });
+
+      const balance = await contract2.balanceOf(owner.address);
+      console.log(balance);
+    });
+  });
+
+  describe("Deployment", () => {
+    it("Should setup the vault", async () => {
       const { vault, owner } = await loadFixture(deployFixture);
 
       expect(await vault.owner()).to.equal(owner.address);
+      expect(await vault.uniswapPortion()).to.equal(50);
+      expect(await vault.balancerPortion()).to.equal(50);
+    });
+
+    it("Should deposit 1 ETH", async () => {
+      const { vault, vitalik } = await loadFixture(deployFixture);
+
+      const vitalik_address = await vitalik.getAddress();
+      // get balance
+      const v_balance = await hre.ethers.provider.getBalance(vitalik_address);
+      expect(v_balance).to.be.gt(0);
+
+      const depositAmount = hre.ethers.parseEther("1");
+      await vault.connect(vitalik).deposit({ value: depositAmount });
+
+      // const balance = await vault.balance();
+      // expect(balance).to.equal(depositAmount);
     });
   });
 });
