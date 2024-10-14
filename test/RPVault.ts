@@ -21,8 +21,6 @@ describe("RPLVault", function () {
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
   async function deployFixture() {
-    // const lockedAmount = ONE_GWEI;
-
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
@@ -47,9 +45,9 @@ describe("RPLVault", function () {
 
     const provider = hre.ethers.provider;
 
-    const wallet = new Wallet(privateKey, provider);
+    // const wallet = new Wallet(privateKey, provider);
 
-    return { vault, owner, vitalik, otherAccount, provider, wallet };
+    return { vault, owner, vitalik, otherAccount, provider };
   }
 
   describe("Test swaps on RPL router", function () {
@@ -63,6 +61,11 @@ describe("RPLVault", function () {
     // }
 
     it.only("Should optimise a swap", async () => {
+      const { vault, vitalik } = await loadFixture(deployFixture);
+
+      const rplRouterAddress = await vault.getRouter();
+      expect(rplRouterAddress.toLowerCase()).to.equal("0x16d5a408e807db8ef7c578279beeee6b228f1c1c");
+
       const provider = hre.ethers.provider;
       console.log(provider);
 
@@ -72,28 +75,33 @@ describe("RPLVault", function () {
         "function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external payable",
       ];
 
-      const contract = new Contract(
+      const rpContract = new Contract(
         "0x16d5a408e807db8ef7c578279beeee6b228f1c1c",
         abi,
         provider
       );
 
-      const contract2 = new hre.ethers.Contract(
+      const rplContract = new hre.ethers.Contract(
         MAINNET_RETH,
         ["function balanceOf(address) external view returns (uint256)"],
         provider
       );
 
-      const balance_before = await contract2.balanceOf(owner.address);
-      console.log(balance_before);
+      const balance_before = await rplContract.balanceOf(owner.address);
+      console.log("Balance before: ", balance_before);
 
       // Do a swap
-      await contract.connect(owner).swapTo(50, 50, 100, 100, {
+      await rpContract.connect(owner).swapTo(50, 50, 100, 100, {
         value: 1000000000000000000n,
       });
 
-      const balance = await contract2.balanceOf(owner.address);
-      console.log(balance);
+      const balance = await rplContract.balanceOf(owner.address);
+      console.log("Balance after: ", balance);
+
+      await vault.connect(vitalik).deposit({ value: 1000000000000000000n });
+
+      const v_balance = await vault.balance();
+      console.log("Vault balance: ", v_balance);
     });
   });
 

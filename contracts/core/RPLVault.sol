@@ -9,7 +9,9 @@ import {IVault} from "../IVault.sol";
 
 interface IRocketPoolRouter {
     function swapFrom(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external;
-    function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut, uint256 _ethTokensIn) external payable;
+    // function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut, uint256 _ethTokensIn) external payable;
+    // https://github.com/rocket-pool/rocketpool-router/blob/master/contracts/RocketSwapRouter.sol#L64
+    function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external payable;
 }
 
 contract RPVault is ERC20, IVault, Ownable {
@@ -33,6 +35,10 @@ contract RPVault is ERC20, IVault, Ownable {
 
     function getOracle() external view returns (address) {
         return _oracle;
+    }
+
+    function getRouter() external pure returns (address) {
+        return _router;
     }
 
     function getUnderlyingToken() external pure returns (address) {
@@ -63,7 +69,9 @@ contract RPVault is ERC20, IVault, Ownable {
         require(msg.value > 0, "RPLVault: Invalid deposit amount");
 
         uint256 amount = msg.value;
-        IRocketPoolRouter(_router).swapTo{value: msg.value}(uniswapPortion, balancerPortion, 0, amount, amount);
+        // uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut 
+        // function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut
+        IRocketPoolRouter(_router).swapTo{value: msg.value}(uniswapPortion, balancerPortion, 0, amount);
         balances[msg.sender] += amount;
         _mint(msg.sender, amount);
 
