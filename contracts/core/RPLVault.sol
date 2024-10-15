@@ -9,7 +9,7 @@ import {IVault} from "../IVault.sol";
 
 interface IRocketPoolRouter {
     function swapFrom(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external;
-    function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut, uint256 _ethTokensIn) external payable;
+    function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external payable;
 }
 
 contract RPVault is ERC20, IVault, Ownable {
@@ -20,8 +20,10 @@ contract RPVault is ERC20, IVault, Ownable {
 
     uint256 public uniswapPortion;
     uint256 public balancerPortion;
+    uint256 public vestingPeriod;
 
     mapping(address => uint256) balances;
+    mapping(address => uint256) nextClaimTime;
 
     function balance () external view returns (uint256) {
         return address(this).balance;
@@ -55,6 +57,7 @@ contract RPVault is ERC20, IVault, Ownable {
     constructor() ERC20("ZK rETH", "zkrETH") Ownable(msg.sender) {
         uniswapPortion = 50;
         balancerPortion = 50;
+        vestingPeriod = 1 days;
         _self = address(this);
     }
 
@@ -63,35 +66,38 @@ contract RPVault is ERC20, IVault, Ownable {
         require(msg.value > 0, "RPLVault: Invalid deposit amount");
 
         uint256 amount = msg.value;
-        IRocketPoolRouter(_router).swapTo{value: msg.value}(uniswapPortion, balancerPortion, 0, amount, amount);
+        IRocketPoolRouter(_router).swapTo{value: msg.value}(uniswapPortion, balancerPortion, 0, amount);
+        
+        nextClaimTime[msg.sender] = block.timestamp + vestingPeriod;
         balances[msg.sender] += amount;
         _mint(msg.sender, amount);
 
         emit Deposit(msg.sender, amount);
     }
 
-    function withdraw(uint256 amount) external {
+    function exitAll() external {
+        uint256 amount = balances[msg.sender];
+        require(amount > 0, "RPLVault: Insufficient balance");
+
+        _exit(amount);
+    }
+
+    function exit(uint256 amount) external {
         require(amount > 0, "RPLVault: Invalid withdraw amount");
         require(balances[msg.sender] >= amount, "RPLVault: Insufficient balance");
 
+        _exit(amount);
+    }
+
+    function _exit(uint256 amount) internal {
         IRocketPoolRouter(_router).swapFrom(uniswapPortion, balancerPortion, 0, amount);
 
         balances[msg.sender] -= amount;
         _burn(msg.sender, amount);
-        // IERC20(lpToken).transfer(msg.sender, amount);
+        IERC20(lpToken).transfer(msg.sender, amount);
 
         emit Withdraw(msg.sender, amount);
     }
-
-    // function exit() external {
-    //     uint256 amount = balances[msg.sender];
-    //     require(amount > 0, "RPLVault: Insufficient balance");
-
-    //     balances[msg.sender] = 0;
-    //     IERC20(lpToken).transfer(msg.sender, amount);
-
-    //     emit Withdraw(msg.sender, amount);
-    // }
 
     function getLatestPrice() external view returns (int) {
         IOracle oracle = IOracle(_oracle);

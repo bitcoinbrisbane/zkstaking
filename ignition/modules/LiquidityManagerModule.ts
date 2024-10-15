@@ -3,10 +3,10 @@
 
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-const LiqudityManagerModule = buildModule("LiqudityManagerModule", (m) => {
-  const lm = m.contract("LiqudityManager", [], {});
+const LiquidityManagerModule = buildModule("LiquidityManagerModule", (m) => {
+  const lm = m.contract("LiquidityManager", [], {});
 
   return { lm };
 });
 
-export default LiqudityManagerModule;
+export default LiquidityManagerModule;

@@ -14,15 +14,13 @@ const MAINNET_UNISWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 const MAINNET_UNISWAP_QUOTER = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6";
 const MAINNET_BALANCER_VAULT = "0xba12222222228d8ba445958a75a0704d566bf2c8";
 
-const privateKey = process.env.PRIVATE_KEY || "";
+const privateKey = process.env.TEST_PRIVATE_KEY || "";
 
 describe("RPLVault", function () {
   // We define a fixture to reuse the same setup in every test.
   // We use loadFixture to run this setup once, snapshot that state,
   // and reset Hardhat Network to that snapshot in every test.
   async function deployFixture() {
-    // const lockedAmount = ONE_GWEI;
-
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
@@ -40,32 +38,24 @@ describe("RPLVault", function () {
 
     // Check the balance of the account
     const balance = await hre.ethers.provider.getBalance(vitalik_address);
-    console.log(balance);
 
     const RPVault = await hre.ethers.getContractFactory("RPVault");
     const vault = await RPVault.deploy();
 
     const provider = hre.ethers.provider;
 
-    const wallet = new Wallet(privateKey, provider);
+    // get block number
+    const blockNumber = await provider.getBlockNumber();
+    console.log(blockNumber);
 
-    return { vault, owner, vitalik, otherAccount, provider, wallet };
+    // const wallet = new Wallet(privateKey, provider);
+
+    return { vault, owner, vitalik, otherAccount, provider };
   }
 
   describe("Test swaps on RPL router", function () {
-    // async function getRethBalance(address: string) {
-    //   const contract = new hre.ethers.Contract(
-    //     MAINNET_RETH,
-    //     ["function balanceOf(address) external view returns (uint256)"],
-    //     provider
-    //   );
-    //   return await contract.balanceOf(address);
-    // }
-
-    it.only("Should optimise a swap", async () => {
+    it.skip("Should optimise a swap", async () => {
       const provider = hre.ethers.provider;
-      console.log(provider);
-
       const [owner, otherAccount] = await hre.ethers.getSigners();
 
       const abi = [
@@ -106,19 +96,20 @@ describe("RPLVault", function () {
       expect(await vault.balancerPortion()).to.equal(50);
     });
 
-    it("Should deposit 1 ETH", async () => {
-      const { vault, vitalik } = await loadFixture(deployFixture);
-
-      const vitalik_address = await vitalik.getAddress();
-      // get balance
-      const v_balance = await hre.ethers.provider.getBalance(vitalik_address);
-      expect(v_balance).to.be.gt(0);
+    it.only("Should deposit 1 ETH and withdraw 1 ETH", async () => {
+      const { vault, owner, provider } = await loadFixture(deployFixture);
 
       const depositAmount = hre.ethers.parseEther("1");
-      await vault.connect(vitalik).deposit({ value: depositAmount });
+      const ownerBalance = await provider.getBalance(owner.address);
+      console.log(ownerBalance.toString());
 
-      // const balance = await vault.balance();
-      // expect(balance).to.equal(depositAmount);
+      await vault.connect(owner).deposit({ value: depositAmount });
+
+      const balance = await vault.balance();
+      expect(balance).to.equal(depositAmount);
+
+      // await vault.connect(owner).exit(depositAmount);
+      // expect(await vault.balance()).to.equal(0);
     });
   });
 });
