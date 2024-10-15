@@ -102,7 +102,7 @@ contract RPVault is ERC20, IVault, Ownable {
         uint256 balanceBefore = msg.sender.balance;
 
         // function swapFrom(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut, uint256 _tokensIn) external;
-        IRocketPoolRouter(_router).swapFrom(uniswapPortion, balancerPortion, 0, amount, balanceBefore);
+        IRocketPoolRouter(_router).swapFrom(uniswapPortion, balancerPortion, 0, amount, amount);
         uint256 balanceAfter = msg.sender.balance;
 
         uint256 delta = balanceAfter - balanceBefore;
