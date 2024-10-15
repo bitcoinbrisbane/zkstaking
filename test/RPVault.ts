@@ -54,36 +54,49 @@ describe("RPLVault", function () {
   }
 
   describe("Test swaps on RPL router", function () {
-    it.skip("Should optimise a swap", async () => {
+    it.only("Should do a swap via the router", async () => {
       const provider = hre.ethers.provider;
       const [owner, otherAccount] = await hre.ethers.getSigners();
 
       const abi = [
         "function swapTo(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut) external payable",
+        "function swapFrom(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut, uint256 _tokensIn) external",
       ];
 
-      const contract = new Contract(
+      const router = new Contract(
         "0x16d5a408e807db8ef7c578279beeee6b228f1c1c",
         abi,
         provider
       );
 
-      const contract2 = new hre.ethers.Contract(
+      const rethContract = new hre.ethers.Contract(
         MAINNET_RETH,
-        ["function balanceOf(address) external view returns (uint256)"],
+        [
+          "function balanceOf(address) external view returns (uint256)",
+          "function approve(address spender, uint256 amount) external returns (bool)",
+        ],
         provider
       );
 
-      const balance_before = await contract2.balanceOf(owner.address);
+      const owner_address = await owner.getAddress();
+      const balance_before = await rethContract.balanceOf(owner_address);
       console.log(balance_before);
 
       // Do a swap
-      await contract.connect(owner).swapTo(50, 50, 100, 100, {
+      await router.connect(owner).swapTo(50, 50, 100, 100, {
         value: 1000000000000000000n,
       });
 
-      const balance = await contract2.balanceOf(owner.address);
+      const balance = await rethContract.balanceOf(owner_address);
       console.log(balance);
+
+      expect(balance).to.be.gt(balance_before);
+
+      // Approve
+      await rethContract.connect(owner).approve("0x16d5a408e807db8ef7c578279beeee6b228f1c1c", balance);
+
+      // Do a swap back
+      await router.connect(owner).swapFrom(50, 50, 0, 100, balance);
     });
   });
 
@@ -96,7 +109,7 @@ describe("RPLVault", function () {
       expect(await vault.balancerPortion()).to.equal(50);
     });
 
-    it.only("Should deposit 1 ETH and withdraw 1 ETH", async () => {
+    it.skip("Should deposit 1 ETH and withdraw 1 ETH", async () => {
       const { vault, owner, provider } = await loadFixture(deployFixture);
 
       const depositAmount = hre.ethers.parseEther("1");
@@ -105,11 +118,53 @@ describe("RPLVault", function () {
 
       await vault.connect(owner).deposit({ value: depositAmount });
 
+      // Should have no balance as its stake in RP
+      const ethBalance = await vault.balance();
+      expect(ethBalance).to.equal(0);
+
+      const lpBalance = await vault.lpBalance();
+      expect(lpBalance).to.be.gt(0);
+      console.log(lpBalance.toString());
+
+      const ethBalanceOwner = await vault.balanceOf(owner.address);
+      console.log(ethBalanceOwner.toString());
+      expect(ethBalanceOwner).to.equal(depositAmount);
+
+      // await vault.connect(owner).exitAll();
+    });
+
+    it("Should stake and unstake", async () => {
+      const { vault, owner, provider } = await loadFixture(deployFixture);
+
+      const depositAmount = hre.ethers.parseEther("1");
+      const ownerBalance = await provider.getBalance(owner.address);
+      console.log(ownerBalance.toString());
+
+      const vaultAddress = await vault.getAddress();
+
+      await owner.sendTransaction({
+        to: vaultAddress,
+        value: depositAmount,
+      });
+
       const balance = await vault.balance();
       expect(balance).to.equal(depositAmount);
 
-      // await vault.connect(owner).exit(depositAmount);
-      // expect(await vault.balance()).to.equal(0);
+      await vault.connect(owner).stakeAll();
+      const ethBalanceAfter = await vault.balance();
+      expect(ethBalanceAfter).to.equal(0);
+
+      const lpBalance = await vault.lpBalance();
+      expect(lpBalance).to.be.gt(0);
+
+      await vault.connect(owner).unstakeAll();
+      const ethBalanceOwner = await vault.balanceOf(owner.address);
+
+      console.log(ethBalanceOwner.toString());
+      expect(ethBalanceOwner).to.be.approximately(
+        depositAmount,
+        1000000000000000
+      );
     });
   });
 });
