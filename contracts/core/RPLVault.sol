@@ -37,6 +37,10 @@ contract RPVault is ERC20, IVault, Ownable {
         return _oracle;
     }
 
+    function getRouter() external pure returns (address) {
+        return _router;
+    }
+
     function getUnderlyingToken() external pure returns (address) {
         return lpToken;
     }
