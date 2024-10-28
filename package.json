@@ -5,6 +5,12 @@
   "repository": "git@github.com:bitcoinbrisbane/zkstaking.git",
   "author": "Lucas Cullen <lucas@bitcoinbrisbane.com.au>",
   "license": "MIT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "verify": "hardhat verify"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
@@ -19,7 +25,7 @@
     "@types/mocha": ">=9.1.0",
     "@types/node": ">=18.0.0",
     "chai": "^4.2.0",
-    "ethers": "^6.4.0",
+    "ethers": "^6.13.3",
     "hardhat": "^2.22.11",
     "hardhat-gas-reporter": "^1.0.8",
     "solidity-coverage": "^0.8.0",
@@ -28,6 +34,7 @@
     "typescript": ">=4.5.0"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^5.0.2"
+    "@openzeppelin/contracts": "^5.0.2",
+    "dotenv": "^16.4.5"
   }
 }
