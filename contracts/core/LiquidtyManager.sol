@@ -2,16 +2,19 @@
 pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IVault} from "../IVault.sol";
 
-contract LiqidityManger is Ownable {
+contract LiqidityManger is Ownable, ERC20 {
 
     uint256 public unallocatedFunds;
     uint256 public allocatedFunds;
     uint256 public totalFunds;
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) ERC20("zkETH", "zkETH") {
+
+    }
 
     mapping(uint256 => mapping(address => uint256)) public poolBalances;
     address[] public pools;
@@ -21,6 +24,8 @@ contract LiqidityManger is Ownable {
         poolBalances[poolId][msg.sender] += msg.value;
         totalFunds += msg.value;
         unallocatedFunds += msg.value;
+
+        _mint(msg.sender, msg.value);
 
         emit Deposit(msg.sender, msg.value);
     }
