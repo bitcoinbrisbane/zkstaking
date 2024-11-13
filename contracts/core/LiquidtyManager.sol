@@ -2,62 +2,66 @@
 pragma solidity ^0.8.27;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IVault} from "../IVault.sol";
 
-contract LiqidityManger is Ownable {
+contract LiquidityManger is Ownable {
 
-    uint256 public unallocatedFunds;
-    uint256 public allocatedFunds;
-    uint256 public totalFunds;
+    uint256 public unallocatedAssets;
+    uint256 public allocatedAssets;
+    uint256 public totalAssets;
 
     constructor() Ownable(msg.sender) {
 
     }
 
-    mapping(uint256 => mapping(address => uint256)) public poolBalances;
-    address[] public pools;
+    mapping(address => mapping(address => uint256)) public balances;
+    mapping(address => address) public vaults;
 
+    function addVault(IVault vault) external onlyOwner {
+        require(vaults[address(vault)] == address(0), "LM: Pool already exists");
 
-    function deposit(uint256 poolId) external payable {
-        require(poolId < pools.length, "LM: Invalid pool id");
-        require(pools[poolId] != address(0), "LM: Pool not found");
+        vaults[address(vault)] = address(vault);
 
-        poolBalances[poolId][msg.sender] += msg.value;
-        totalFunds += msg.value;
-        unallocatedFunds += msg.value;
-
-        IVault(pools[poolId]).deposit{value: msg.value}();
-
-        emit Deposit(msg.sender, msg.value);
+        emit PoolAdded(address(vault));
     }
 
-    function withdraw(uint256 poolId, uint256 amount) external {
-        require(poolId < pools.length, "LM: Invalid pool id");
-        require(poolBalances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
+    function stake(address vaultId) external payable {
+        require(vaultId != address(0), "LM: Pool not found");
+        require(vaults[vaultId] != address(0), "LM: Pool not found");
 
-        poolBalances[poolId][msg.sender] -= amount;
-        totalFunds -= amount;
-        unallocatedFunds -= amount;
+        balances[vaultId][msg.sender] += msg.value;
+        totalAssets += msg.value;
+        unallocatedAssets += msg.value;
+
+        IVault(vaults[vaultId]).deposit{value: msg.value}();
+
+        emit Staked(msg.sender, msg.value);
+    }
+
+    function unstake(address poolId, uint256 amount) external {
+        require(balances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
+
+        balances[poolId][msg.sender] -= amount;
+        totalAssets -= amount;
+        unallocatedAssets -= amount;
 
         payable(msg.sender).transfer(amount);
 
-        emit Withdraw(msg.sender, amount);
+        emit Unstaked(msg.sender, amount);
     }
 
-    function addPool(IVault pool) external onlyOwner {
-        pools.push(address(pool));
+    function allocate(address poolId, uint256 amount) external {
+        require(poolId != address(0), "LM: Invalid pool id");
+        require(balances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
+
+        balances[poolId][msg.sender] += amount;
+        allocatedAssets += amount;
+
+        /// emit Staked(msg.sender, amount);
     }
 
-    function stake(uint256 poolId, uint256 amount) external {
-        require(poolId < pools.length, "LM: Invalid pool id");
-        require(poolBalances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
-
-        poolBalances[poolId][msg.sender] += amount;
-        allocatedFunds += amount;
-    }
-
-    event Deposit(address indexed user, uint256 amount);
-    event Withdraw(address indexed user, uint256 amount);
+    event PoolAdded(address indexed pool);
+    event Staked(address indexed account, uint256 amount);
+    event Unstaked(address indexed account, uint256 amount);
 }
