@@ -10,7 +10,7 @@ import {IRocketPoolRouter} from "./IRocketPoolRouter.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
-    address private constant lpToken =
+    address private constant _lpToken =
         0xae78736Cd615f374D3085123A210448E74Fc6393; // rETH
     address private constant _router =
         0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C; // https://etherscan.io/address/0x16d5a408e807db8ef7c578279beeee6b228f1c1c#writeContract & https://github.com/rocket-pool/rocketpool-router/blob/master/src/RocketPoolRouter.ts#L25
@@ -25,7 +25,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
     mapping(address => uint256) public nextClaimTime;
 
     function asset() external pure returns (address) {
-        return lpToken;
+        return _lpToken;
     }
 
     function balance() external view returns (uint256) {
@@ -38,7 +38,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         override
         returns (uint256 totalManagedAssets)
     {
-        return IERC20(lpToken).balanceOf(_self);
+        return IERC20(_lpToken).balanceOf(_self);
     }
 
     function getOracle() external view returns (address) {
@@ -79,7 +79,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         vestingPeriod = 1 days;
         _self = address(this);
 
-        IERC20(lpToken).approve(_router, type(uint256).max);
+        IERC20(_lpToken).approve(_router, type(uint256).max);
     }
 
     function deposit() external payable nonReentrant() {
@@ -102,7 +102,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
             amount
         );
 
-        assert(IERC20(lpToken).balanceOf(_self) > 0);
+        assert(IERC20(_lpToken).balanceOf(_self) > 0);
         
         // Get the current balance of this contract in ETH
         uint256 balanceAfter = _self.balance;
@@ -119,8 +119,8 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         emit Deposit(msg.sender, amount);
     }
 
-    // function stake(uint256 amount) external onlyOwner {
-    //     require(amount > _self.balance, "RPLVault: Invalid amount");
+    // function stakeAll() external onlyOwner {
+    //     uint256 amount = _self.balance;
     //     IRocketPoolRouter(_router).swapTo{value: amount}(
     //         uniswapPortion,
     //         balancerPortion,
@@ -130,25 +130,18 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
     //     emit Staked(amount);
     // }
 
-    function stakeAll() external onlyOwner {
-        uint256 amount = _self.balance;
-        IRocketPoolRouter(_router).swapTo{value: amount}(
-            uniswapPortion,
-            balancerPortion,
-            0,
-            amount
+    function withdraw(uint256 assets) external {
+        require(assets > 0, "RPLVault: Invalid withdraw amount");
+        require(
+            balances[msg.sender] >= assets,
+            "RPLVault: Insufficient balance"
         );
-        emit Staked(amount);
-    }
-
-    function withdraw(uint256 amount) external override {}
-
-    function unstakeAll() external onlyOwner {
+        
         // rETH balance of this contract
-        uint256 amount = IERC20(lpToken).balanceOf(_self);
+        uint256 amount = IERC20(_lpToken).balanceOf(_self);
 
         // Get the current balance of this contract in ETH
-        uint256 balanceBefore = msg.sender.balance;
+        uint256 balanceBefore = _self.balance;
 
         // function swapFrom(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut, uint256 _tokensIn) external;
         IRocketPoolRouter(_router).swapFrom(
@@ -158,37 +151,40 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
             amount,
             amount
         );
-        uint256 balanceAfter = msg.sender.balance;
+
+        uint256 balanceAfter = _self.balance;
+        assert(balanceAfter > balanceBefore);
 
         uint256 delta = balanceAfter - balanceBefore;
         emit Staked(delta);
     }
 
-    function exitAll() external {
-        uint256 amount = balances[msg.sender];
-        require(amount > 0, "RPLVault: Insufficient balance");
+    // function exitAll() external {
+    //     uint256 amount = balances[msg.sender];
+    //     require(amount > 0, "RPLVault: Insufficient balance");
 
-        _exit(amount);
-    }
+    //     _exit(amount);
+    // }
 
-    function exit(uint256 amount) external {
-        require(amount > 0, "RPLVault: Invalid withdraw amount");
-        require(
-            balances[msg.sender] >= amount,
-            "RPLVault: Insufficient balance"
-        );
+    // function exit(uint256 amount) external {
+    //     require(amount > 0, "RPLVault: Invalid withdraw amount");
+    //     require(
+    //         balances[msg.sender] >= amount,
+    //         "RPLVault: Insufficient balance"
+    //     );
 
-        _exit(amount);
-    }
+    //     _exit(amount);
+    // }
 
-    function _exit(uint256 amount) internal {
+    function _withdraw(uint256 amount, address sender) internal {
         // remove the users ETH balance
         // function swapFrom(uint256 _uniswapPortion, uint256 _balancerPortion, uint256 _minTokensOut, uint256 _idealTokensOut, uint256 _tokensIn) external;
 
-        uint256 tokensIn = IERC20(lpToken).balanceOf(_self);
+        uint256 tokensIn = IERC20(_lpToken).balanceOf(_self);
 
         // Get the current balance of this contract in ETH
         uint256 balanceBefore = _self.balance;
+
         IRocketPoolRouter(_router).swapFrom(
             uniswapPortion,
             balancerPortion,
@@ -197,7 +193,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
             tokensIn
         );
 
-        // uint256 balanceAfter = _self.balance;
+        uint256 balanceAfter = _self.balance;
 
         // // Amount of ETH traded back to this contract via the router
         // uint256 delta = balanceBefore - balanceAfter;
@@ -212,7 +208,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         // (bool sent, ) = sender.call{value: delta}("");
         // require(sent, "Failed to send Ether");
 
-        emit Withdraw(msg.sender, amount);
+        emit Withdrawn(sender, amount);
     }
 
     function getLatestPrice() external view returns (int) {
@@ -221,8 +217,8 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
     }
 
     function emerganceyWithdraw() external onlyOwner {
-        uint256 amount = IERC20(lpToken).balanceOf(_self);
-        IERC20(lpToken).transfer(owner(), amount);
+        uint256 amount = IERC20(_lpToken).balanceOf(_self);
+        IERC20(_lpToken).transfer(owner(), amount);
 
         payable(owner()).transfer(address(this).balance);
     }
@@ -233,5 +229,5 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
 
     event Staked(uint256 amount);
     event WeightsUpdated(uint256 uniswapPortion, uint256 balancerPortion);
-    event Unstaked(uint256 amount);
+    event Withdrawn(uint256 amount, address indexed sender);
 }

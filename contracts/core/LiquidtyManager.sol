@@ -5,8 +5,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IVault} from "../IVault.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract LiqidityManger is Ownable {
+contract LiqidityManger is Ownable, ReentrancyGuard {
 
     uint256 public unallocatedAssets;
     uint256 public allocatedAssets;
@@ -27,7 +28,7 @@ contract LiqidityManger is Ownable {
         emit PoolAdded(address(vault));
     }
 
-    function stake(address vaultId) external payable {
+    function stake(address vaultId) external payable nonReentrant() {
         require(vaultId != address(0), "LM: Pool not found");
         require(vaults[vaultId] != address(0), "LM: Pool not found");
 
@@ -40,7 +41,7 @@ contract LiqidityManger is Ownable {
         emit Staked(msg.sender, msg.value);
     }
 
-    function unstake(address poolId, uint256 amount) external {
+    function unstake(address poolId, uint256 amount) external nonReentrant() {
         require(balances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
 
         balances[poolId][msg.sender] -= amount;
@@ -59,7 +60,7 @@ contract LiqidityManger is Ownable {
         balances[poolId][msg.sender] += amount;
         allocatedAssets += amount;
 
-        /// emit Staked(msg.sender, amount);
+        emit Staked(msg.sender, amount);
     }
 
     event PoolAdded(address indexed pool);
