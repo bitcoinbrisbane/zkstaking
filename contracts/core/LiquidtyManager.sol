@@ -21,16 +21,16 @@ contract LiqidityManger is Ownable, ReentrancyGuard {
     mapping(address => address) public vaults;
 
     function addVault(IVault vault) external onlyOwner {
-        require(vaults[address(vault)] == address(0), "LM: Pool already exists");
+        require(vaults[address(vault)] == address(0), "LM: Vault already exists");
 
         vaults[address(vault)] = address(vault);
 
-        emit PoolAdded(address(vault));
+        emit VaultAdded(address(vault));
     }
 
     function stake(address vaultId) external payable nonReentrant() {
-        require(vaultId != address(0), "LM: Pool not found");
-        require(vaults[vaultId] != address(0), "LM: Pool not found");
+        require(vaultId != address(0), "LM: Vault not found");
+        require(vaults[vaultId] != address(0), "LM: Vault not found");
 
         balances[vaultId][msg.sender] += msg.value;
         totalAssets += msg.value;
@@ -63,7 +63,7 @@ contract LiqidityManger is Ownable, ReentrancyGuard {
         emit Staked(msg.sender, amount);
     }
 
-    event PoolAdded(address indexed pool);
+    event VaultAdded(address indexed vault);
     event Staked(address indexed account, uint256 amount);
     event Unstaked(address indexed account, uint256 amount);
 }
