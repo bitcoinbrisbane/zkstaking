@@ -143,20 +143,12 @@ describe("RPLVault", function () {
       const vaultAddress = await vault.getAddress();
       console.log(vaultAddress);
 
-      // await vitalik.sendTransaction({
-      //   to: vaultAddress,
-      //   value: depositAmount,
-      // });
-
-      // const balance = await vault.balance();
-      // expect(balance).to.equal(depositAmount);
-
       await vault.connect(vitalik).deposit( { value: depositAmount } );
       const balanceAfter = await provider.getBalance(vitalik.address);
       expect(balanceAfter).to.be.lt(vitalikBalance);
-      
-      // const ethBalanceAfter = await vault.balance( { value: ethers.parseEther("1")} );
-      // expect(ethBalanceAfter).to.equal(0);
+
+      const ethBalanceAfter = await provider.getBalance(vitalik.address);
+      expect(ethBalanceAfter).to.equal(0);
     });
   });
 });
