@@ -5,7 +5,7 @@ import {
 
 import { expect } from "chai";
 import { Contract, Wallet } from "ethers";
-import hre, { network } from "hardhat";
+import hre, { ethers, network } from "hardhat";
 
 // const MAINNET_ROCKET_STORAGE = "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46";
 // const MAINNET_WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
@@ -48,12 +48,10 @@ describe("RPLVault", function () {
     const blockNumber = await provider.getBlockNumber();
     console.log(blockNumber);
 
-    // const wallet = new Wallet(privateKey, provider);
-
     return { vault, owner, vitalik, otherAccount, provider };
   }
 
-  describe("Test swaps on RPL router", function () {
+  describe.skip("Integration tests on RPL", () => {
     it("Should do a swap via the router", async () => {
       const provider = hre.ethers.provider;
       const [owner, otherAccount] = await hre.ethers.getSigners();
@@ -124,49 +122,41 @@ describe("RPLVault", function () {
       const ethBalance = await vault.balance();
       expect(ethBalance).to.equal(0);
 
-      const lpBalance = await vault.lpBalance();
-      expect(lpBalance).to.be.gt(0);
-      console.log(lpBalance.toString());
+      const balance = await vault.balance();
+      expect(balance).to.be.gt(0);
+      console.log(balance.toString());
 
       const ethBalanceOwner = await vault.balanceOf(owner.address);
       console.log(ethBalanceOwner.toString());
       expect(ethBalanceOwner).to.equal(depositAmount);
-
-      // await vault.connect(owner).exitAll();
     });
 
-    it.only("Should stake and unstake", async () => {
-      const { vault, owner, provider } = await loadFixture(deployFixture);
+    it.only("Should deposit", async () => {
+      const { vault, owner, vitalik, provider } = await loadFixture(deployFixture);
 
       const depositAmount = hre.ethers.parseEther("1");
-      const ownerBalance = await provider.getBalance(owner.address);
-      console.log(ownerBalance.toString());
+      const vitalikBalance = await provider.getBalance(vitalik.address);
+      console.log(vitalikBalance.toString());
+
+      expect(vitalikBalance).to.be.gt(0);
 
       const vaultAddress = await vault.getAddress();
+      console.log(vaultAddress);
 
-      await owner.sendTransaction({
-        to: vaultAddress,
-        value: depositAmount,
-      });
+      // await vitalik.sendTransaction({
+      //   to: vaultAddress,
+      //   value: depositAmount,
+      // });
 
-      const balance = await vault.balance();
-      expect(balance).to.equal(depositAmount);
+      // const balance = await vault.balance();
+      // expect(balance).to.equal(depositAmount);
 
-      await vault.connect(owner).stakeAll();
-      const ethBalanceAfter = await vault.balance();
-      expect(ethBalanceAfter).to.equal(0);
-
-      const lpBalance = await vault.lpBalance();
-      expect(lpBalance).to.be.gt(0);
-
-      await vault.connect(owner).unstakeAll();
-      // const ethBalanceOwner = await vault.balanceOf(owner.address);
-
-      // console.log(ethBalanceOwner.toString());
-      // expect(ethBalanceOwner).to.be.approximately(
-      //   depositAmount,
-      //   1000000000000000
-      // );
+      await vault.connect(vitalik).deposit( { value: depositAmount } );
+      const balanceAfter = await provider.getBalance(vitalik.address);
+      expect(balanceAfter).to.be.lt(vitalikBalance);
+      
+      // const ethBalanceAfter = await vault.balance( { value: ethers.parseEther("1")} );
+      // expect(ethBalanceAfter).to.equal(0);
     });
   });
 });

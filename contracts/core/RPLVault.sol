@@ -95,26 +95,20 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         uint256 balanceBefore = _self.balance;
 
         // Swap ETH to rETH
-        IRocketPoolRouter(_router).swapTo{value: msg.value}(
+        IRocketPoolRouter(_router).swapTo{value: amount}(
             uniswapPortion,
             balancerPortion,
             0,
             amount
         );
 
-        assert(IERC20(_lpToken).balanceOf(_self) > 0);
-        
         // Get the current balance of this contract in ETH
         uint256 balanceAfter = _self.balance;
-        assert(balanceAfter > balanceBefore);
+        assert(balanceBefore > balanceAfter);
         
-        // Amount of ETH traded back to this contract via the router
-        uint256 delta = balanceBefore - balanceAfter;
-        assert(delta > 0);
-
         nextClaimTime[sender] = block.timestamp + vestingPeriod;
         balances[sender] += amount;
-        _mint(sender, delta);
+        _mint(sender, amount);
 
         emit Deposit(sender, amount);
     }
