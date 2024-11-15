@@ -109,6 +109,17 @@ describe("RPLVault", function () {
       expect(await vault.balancerPortion()).to.equal(50);
     });
 
+    it("Should let owner set weights", async () => {
+      const { vault, owner } = await loadFixture(deployFixture);
+
+      expect(await vault.uniswapPortion()).to.equal(50);
+      expect(await vault.balancerPortion()).to.equal(50);
+
+      await vault.connect(owner).setWeight(60, 40);
+      expect(await vault.uniswapPortion()).to.equal(50);
+      expect(await vault.balancerPortion()).to.equal(50);
+    });
+
     it.skip("Should deposit 1 ETH and withdraw 1 ETH", async () => {
       const { vault, owner, provider } = await loadFixture(deployFixture);
 
@@ -140,14 +151,12 @@ describe("RPLVault", function () {
 
       expect(vitalikBalance).to.be.gt(0);
 
-      const vaultAddress = await vault.getAddress();
-      console.log(vaultAddress);
-
       await vault.connect(vitalik).deposit( { value: depositAmount } );
       const balanceAfter = await provider.getBalance(vitalik.address);
       expect(balanceAfter).to.be.lt(vitalikBalance);
 
-      const ethBalanceAfter = await provider.getBalance(vitalik.address);
+      const vaultAddress = await vault.getAddress();
+      const ethBalanceAfter = await provider.getBalance(vaultAddress);
       expect(ethBalanceAfter).to.equal(0);
     });
   });
