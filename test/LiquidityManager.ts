@@ -82,7 +82,7 @@ describe("Liquidity Manager", () => {
     it.only("Should stake assets and receive LP tokens", async () => {
 
       const amount = ethers.parseEther("1");
-      const balance_before = await ethers.provider.getBalance(vault.address);
+      // const balance_before = await ethers.provider.getBalance(vault.address);
 
       await manager.connect(vitalik).stake({ value: amount });
 
