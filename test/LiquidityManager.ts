@@ -34,7 +34,7 @@ describe("Liquidity Manager", () => {
     return { manager, vault, owner, vitalik, otherAccount, provider };
   }
 
-  describe.only("Setup and Deployment", () => {
+  describe("Setup and Deployment", () => {
     it("Should setup the LM", async () => {
       const { manager, owner } = await loadFixture(deployFixture);
 
