@@ -7,63 +7,114 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IVault} from "../IVault.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract LiqidityManger is Ownable, ReentrancyGuard {
+contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
 
     uint256 public unallocatedAssets;
     uint256 public allocatedAssets;
     uint256 public totalAssets;
 
-    constructor() Ownable(msg.sender) {
-
+    struct Weight {
+        uint8 weight;
+        address vault;
     }
 
-    mapping(address => mapping(address => uint256)) public balances;
+    Weight[] public weights;
     mapping(address => address) public vaults;
+    mapping(address => mapping(address => uint256)) public balances;
 
-    function addVault(IVault vault) external onlyOwner {
-        require(vaults[address(vault)] == address(0), "LM: Vault already exists");
+    uint256 public totalWeight;
+    
+    constructor() Ownable(msg.sender) ERC20("OZ Eth", "ozETH") {
+    }
+
+
+    function addVault(IVault vault, uint8 weight) external onlyOwner {
+        require(vaults[address(vault)] == address(0), "addVault: Vault already exists");
 
         vaults[address(vault)] = address(vault);
+        weights.push(Weight(weight, address(vault)));
+        totalWeight += weight;
 
         emit VaultAdded(address(vault));
     }
 
-    function stake(address vaultId) external payable nonReentrant() {
-        require(vaultId != address(0), "LM: Vault not found");
-        require(vaults[vaultId] != address(0), "LM: Vault not found");
+    function removeVault(address vaultId) external onlyOwner {
+        require(vaults[vaultId] != address(0), "removeVault: Vault not found");
 
-        balances[vaultId][msg.sender] += msg.value;
-        totalAssets += msg.value;
-        unallocatedAssets += msg.value;
+        for (uint i = 0; i < weights.length; i++) {
+            if (weights[i].vault == vaultId) {
+                totalWeight -= weights[i].weight;
+                delete weights[i];
+            }
+        }
 
-        IVault(vaults[vaultId]).deposit{value: msg.value}();
+        delete vaults[vaultId];
+    }
+
+    // function _rebalance() internal {
+    //     for (uint i = 0; i < weights.length; i++) {
+    //         uint256 target = (totalAssets * weights[i].weight) / totalWeight;
+    //         uint256 current = IERC20(weights[i].vault).balanceOf(address(this));
+
+    //         if (current > target) {
+    //             uint256 excess = current - target;
+    //             IERC20(weights[i].vault).transfer(owner(), excess);
+    //         } else if (current < target) {
+    //             uint256 deficit = target - current;
+    //             IERC20(weights[i].vault).transferFrom(owner(), address(this), deficit);
+    //         }
+    //     }
+    // }
+
+    function stake() external payable nonReentrant() {
+        require(msg.value > 0, "stake: Invalid amount");
+        require(weights.length > 0, "stake: No vaults added");
+
+        uint256 amount = msg.value;
+        for (uint i = 0; i < weights.length; i++) {
+            uint256 portion = (amount * weights[i].weight) / totalWeight;
+
+            address _vault = weights[i].vault;
+            assert(_vault != address(0));
+            
+            IVault vault = IVault(_vault);
+            vault.deposit{value: portion}();
+
+            balances[_vault][msg.sender] += msg.value;
+        }
+
+        totalAssets += amount;
+        unallocatedAssets += amount;
+        _mint(msg.sender, amount);
 
         emit Staked(msg.sender, msg.value);
     }
 
-    function unstake(address poolId, uint256 amount) external nonReentrant() {
-        require(balances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
+    function unstake(uint256 amount) external nonReentrant() {
+        require(amount > 0, "unstake: Invalid amount");
+        IERC20(address(this)).transferFrom(msg.sender, address(this), amount);
 
-        balances[poolId][msg.sender] -= amount;
+        // balances[poolId][msg.sender] -= amount;
         totalAssets -= amount;
         unallocatedAssets -= amount;
 
+        _burn(msg.sender, amount);
         payable(msg.sender).transfer(amount);
 
         emit Unstaked(msg.sender, amount);
     }
 
-    function allocate(address poolId, uint256 amount) external {
-        require(poolId != address(0), "LM: Invalid pool id");
-        require(balances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
+    // function allocate(address poolId, uint256 amount) external {
+    //     require(poolId != address(0), "LM: Invalid pool id");
+    //     require(balances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
 
-        balances[poolId][msg.sender] += amount;
-        allocatedAssets += amount;
+    //     balances[poolId][msg.sender] += amount;
+    //     allocatedAssets += amount;
 
-        emit Staked(msg.sender, amount);
-    }
+    //     emit Staked(msg.sender, amount);
+    // }
 
-    event VaultAdded(address indexed vault);
     event Staked(address indexed account, uint256 amount);
     event Unstaked(address indexed account, uint256 amount);
+    event VaultAdded(address indexed vault);
 }
