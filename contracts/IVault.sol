@@ -11,7 +11,6 @@ interface IVault is IERC4626Partial {
     
     function deposit() external payable;
     function withdraw(uint256 assets) external;
-    // function exitAll() external;
 
     event Deposit(address indexed sender, uint256 amount);
     event Withdraw(address indexed sender, uint256 amount);

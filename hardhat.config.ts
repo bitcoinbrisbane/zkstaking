@@ -6,12 +6,12 @@ import "solidity-coverage";
 import dotenv from "dotenv";
 dotenv.config();
 
-const PK = process.env.PK;
-if (!PK) {
-  throw new Error("PK is not set");
-}
+// const PK = process.env.PK;
+// if (!PK) {
+//   throw new Error("PK is not set");
+// }
 
-vars.get("PK", PK);
+// vars.get("PK", PK);
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -38,10 +38,10 @@ const config: HardhatUserConfig = {
       },
       blockGasLimit: 60000000, // Network block gasLimit
     },
-    main: {
-      url: process.env.FORKING_URL as string,
-      accounts: [PK as string],
-    },
+    // main: {
+    //   url: process.env.FORKING_URL as string,
+    //   accounts: [PK as string],
+    // },
   },
 };
 
