@@ -42,6 +42,10 @@ const config: HardhatUserConfig = {
     //   url: process.env.FORKING_URL as string,
     //   accounts: [PK as string],
     // },
+    sepolia: {
+      url: "",
+      accounts: [""],
+    },
   },
 };
 

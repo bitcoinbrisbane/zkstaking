@@ -51,24 +51,10 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
         delete vaults[vaultId];
     }
 
-    // function _rebalance() internal {
-    //     for (uint i = 0; i < weights.length; i++) {
-    //         uint256 target = (totalAssets * weights[i].weight) / totalWeight;
-    //         uint256 current = IERC20(weights[i].vault).balanceOf(address(this));
-
-    //         if (current > target) {
-    //             uint256 excess = current - target;
-    //             IERC20(weights[i].vault).transfer(owner(), excess);
-    //         } else if (current < target) {
-    //             uint256 deficit = target - current;
-    //             IERC20(weights[i].vault).transferFrom(owner(), address(this), deficit);
-    //         }
-    //     }
-    // }
-
     function stake() external payable nonReentrant() {
         require(msg.value > 0, "stake: Invalid amount");
         require(weights.length > 0, "stake: No vaults added");
+        require(totalWeight > 0, "stake: Total weight is 0");
 
         uint256 amount = msg.value;
         for (uint i = 0; i < weights.length; i++) {
@@ -92,6 +78,8 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
 
     function unstake(uint256 amount) external nonReentrant() {
         require(amount > 0, "unstake: Invalid amount");
+        require(totalWeight > 0, "stake: Total weight is 0");
+        
         IERC20(address(this)).transferFrom(msg.sender, address(this), amount);
 
         // balances[poolId][msg.sender] -= amount;
@@ -103,16 +91,6 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
 
         emit Unstaked(msg.sender, amount);
     }
-
-    // function allocate(address poolId, uint256 amount) external {
-    //     require(poolId != address(0), "LM: Invalid pool id");
-    //     require(balances[poolId][msg.sender] >= amount, "LM: Insufficient funds");
-
-    //     balances[poolId][msg.sender] += amount;
-    //     allocatedAssets += amount;
-
-    //     emit Staked(msg.sender, amount);
-    // }
 
     event Staked(address indexed account, uint256 amount);
     event Unstaked(address indexed account, uint256 amount);

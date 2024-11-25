@@ -12,16 +12,16 @@ describe("Liquidity Manager", () => {
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
     // Get whale account to impersonate
-    const vitalik_address = "0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B";
+    const ROBINHOOD_ADDRESS = "0x40B38765696e3d5d8d9d834D8AaD4bB6e418E489";
 
     // Impersonating vitalik's account
     await network.provider.request({
       method: "hardhat_impersonateAccount",
-      params: [vitalik_address],
+      params: [ROBINHOOD_ADDRESS],
     });
 
-    // Make vitalik the signer
-    const vitalik = await hre.ethers.getSigner(vitalik_address);
+    // Make whale the signer
+    const whale = await hre.ethers.getSigner(ROBINHOOD_ADDRESS);
 
     const LiquidityManager = await hre.ethers.getContractFactory("LiquidityManager");
     const manager = await LiquidityManager.deploy();
@@ -31,7 +31,7 @@ describe("Liquidity Manager", () => {
 
     const provider = hre.ethers.provider;
 
-    return { manager, vault, owner, vitalik, otherAccount, provider };
+    return { manager, vault, owner, whale, otherAccount, provider };
   }
 
   describe("Setup and Deployment", () => {
@@ -67,10 +67,10 @@ describe("Liquidity Manager", () => {
 
     let manager: any;
     let vault: any;
-    let vitalik: any;
+    let whale: any;
 
     beforeEach(async () => {
-      ({ manager, vitalik } = await loadFixture(deployFixture));
+      ({ manager, whale } = await loadFixture(deployFixture));
       const RPVault = await ethers.getContractFactory("RPVault");
       const vault = await RPVault.deploy();
 
@@ -79,17 +79,20 @@ describe("Liquidity Manager", () => {
       await manager.connect(manager.owner()).addVault(vaultAddress, 10);
     });
 
-    it.only("Should stake assets and receive LP tokens", async () => {
+    it("Should stake assets and receive LP tokens", async () => {
 
       const amount = ethers.parseEther("1");
-      // const balance_before = await ethers.provider.getBalance(vault.address);
+      const balance_before = await ethers.provider.getBalance(vault.address);
 
-      await manager.connect(vitalik).stake({ value: amount });
+      await manager.connect(whale).stake({ value: amount });
 
       // Manager should not have any ETH
       expect(await manager.balance()).to.equal(0);
       expect(await manager.totalAssets()).to.equal(amount);
-      expect(await manager.balanceOf(vitalik.address)).to.equal(amount);
+      expect(await manager.balanceOf(whale.address)).to.equal(amount);
+
+      const balance_after = await ethers.provider.getBalance(vault.address);
+      // expect(balance_after).to.be.gt(balance_before);
 
       const MAINNET_RETH = "0xae78736cd615f374d3085123a210448e74fc6393";
 

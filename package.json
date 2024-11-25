@@ -9,7 +9,8 @@
     "compile": "hardhat compile",
     "test": "hardhat test",
     "coverage": "hardhat coverage",
-    "verify": "hardhat verify"
+    "verify": "hardhat verify",
+    "deploy:token": "npx hardhat ignition deploy ignition/modules/TokenModule.ts --network sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
