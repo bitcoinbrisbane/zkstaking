@@ -2,11 +2,9 @@
 pragma solidity ^0.8.27;
 
 interface IRestake {
-    function getOracle() external view returns (address);
-    function getUnderlyingToken() external view returns (address);
-    function deposit() external payable;
-    function withdraw() external;
+    function stake(uint256 amount) external;
+    function unstake() external;
 
-    event Deposit(address indexed account, uint256 amount);
-    event Withdraw(address indexed account, uint256 amount);
+    event Staked(address indexed user, uint256 amount);
+    event Unstaked(address indexed user, uint256 amount);
 }

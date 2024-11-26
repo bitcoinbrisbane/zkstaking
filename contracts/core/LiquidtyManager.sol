@@ -38,6 +38,7 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
 
         if (restakingPool != address(0)) {
             restakingPools[address(vault)] = restakingPool;
+            IERC20(vault.asset()).approve(restakingPool, type(uint256).max);
         }
 
         emit VaultAdded(address(vault));
