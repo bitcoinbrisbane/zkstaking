@@ -35,15 +35,10 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: process.env.FORKING_URL as string,
-        // blockNumber: 19197423,
         enabled: true,
       },
       blockGasLimit: 60000000, // Network block gasLimit
     },
-    // main: {
-    //   url: process.env.FORKING_URL as string,
-    //   accounts: [PK as string],
-    // },
     sepolia: {
       url: process.env.SEPOLIA_NODE as string,
       accounts: [SEPOLIA_PK as string],

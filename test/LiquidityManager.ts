@@ -4,10 +4,9 @@ import {
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import { expect } from "chai";
-// import { ethers } from "ethers";
 import hre, { ethers, network } from "hardhat";
 
-describe.only("Liquidity Manager", () => {
+describe("Liquidity Manager", () => {
   async function deployFixture() {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await hre.ethers.getSigners();
