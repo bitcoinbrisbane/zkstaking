@@ -6,7 +6,9 @@ import "solidity-coverage";
 import dotenv from "dotenv";
 dotenv.config();
 
-// const PK = process.env.PK;
+const PK = process.env.PK;
+const SEPOLIA_PK = process.env.SEPOLIA_PK;
+
 // if (!PK) {
 //   throw new Error("PK is not set");
 // }
@@ -43,8 +45,8 @@ const config: HardhatUserConfig = {
     //   accounts: [PK as string],
     // },
     sepolia: {
-      url: "",
-      accounts: [""],
+      url: process.env.SEPOLIA_NODE as string,
+      accounts: [SEPOLIA_PK as string],
     },
   },
 };

@@ -161,7 +161,6 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         (bool sent, ) = sender.call{value: delta}("");
         require(sent, "Failed to send Ether");
         
-        
         emit Withdrawn(delta, sender);
     }
 
