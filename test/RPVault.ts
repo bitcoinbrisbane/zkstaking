@@ -4,16 +4,9 @@ import {
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import { expect } from "chai";
-import { Contract } from "ethers";
 import hre, { ethers, network } from "hardhat";
 
-// const MAINNET_ROCKET_STORAGE = "0x1d8f8f00cfa6758d7bE78336684788Fb0ee0Fa46";
-// const MAINNET_WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 const MAINNET_RETH = "0xae78736cd615f374d3085123a210448e74fc6393";
-const MAINNET_RP_ROUTER = "0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C";
-// const MAINNET_UNISWAP_ROUTER = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
-// const MAINNET_UNISWAP_QUOTER = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6";
-// const MAINNET_BALANCER_VAULT = "0xba12222222228d8ba445958a75a0704d566bf2c8";
 
 describe.only("RPLVault", () => {
   async function deployFixture() {
@@ -49,13 +42,15 @@ describe.only("RPLVault", () => {
     return { vault, owner, robinHood, otherAccount, provider };
   }
 
-  describe.only("Deployment", () => {
+  describe("Deployment", () => {
     it("Should setup the vault", async () => {
       const { vault, owner } = await loadFixture(deployFixture);
 
       expect(await vault.owner()).to.equal(owner.address);
       expect(await vault.uniswapPortion()).to.equal(50);
       expect(await vault.balancerPortion()).to.equal(50);
+      expect(await vault.totalAssets()).to.equal(0);
+      expect(await vault.asset()).to.equal(MAINNET_RETH);
     });
 
     it("Should let owner set weights", async () => {
@@ -82,48 +77,35 @@ describe.only("RPLVault", () => {
   });
 
   describe("Stake and unstake", () => {
-    it.only("Should deposit 1 ETH and withdraw 1 ETH", async () => {
+    it.only("Should deposit 1 ETH and receive rETH", async () => {
       const { vault, owner, provider } = await loadFixture(deployFixture);
 
       const depositAmount = hre.ethers.parseEther("1");
       const ownerBalance = await provider.getBalance(owner.address);
-      console.log(ownerBalance.toString());
+      expect(ownerBalance).to.be.greaterThanOrEqual(depositAmount);
 
       await vault.connect(owner).deposit({ value: depositAmount });
+      const afterOwnerBalance = await provider.getBalance(owner.address);
+      expect(afterOwnerBalance).to.be.lt(ownerBalance);
 
       // Should have no balance as its stake in RP
       const ethBalance = await vault.balance();
       expect(ethBalance).to.equal(0);
 
+      // Should still have no balance as its stake in RP
       const balance = await vault.balance();
-      expect(balance).to.be.gt(0);
-      console.log(balance.toString());
+      expect(balance).to.equal(0);
 
       const ethBalanceOwner = await vault.balanceOf(owner.address);
-      console.log(ethBalanceOwner.toString());
       expect(ethBalanceOwner).to.equal(depositAmount);
-    });
 
-    it("Should deposit ETH and receive rETH", async () => {
-      const { vault, owner, robinHood, provider } = await loadFixture(
-        deployFixture
-      );
+      const totalAssets = await vault.totalAssets();
+      expect(totalAssets).to.be.greaterThan(0);
 
-      const depositAmount = hre.ethers.parseEther("1");
-      const balance = await provider.getBalance(robinHood.address);
-      console.log(balance.toString());
+      const reth = await hre.ethers.getContractAt("IERC20", MAINNET_RETH);
+      const rETHBalance = await reth.balanceOf(owner.address);
 
-      expect(balance).to.be.gt(0);
-
-      const vaultAddress = await vault.getAddress();
-      console.log(vaultAddress);
-
-      await vault.connect(robinHood).deposit({ value: depositAmount });
-      const balanceAfter = await provider.getBalance(robinHood.address);
-      expect(balanceAfter).to.be.lt(balance);
-
-      const ethBalanceAfter = await provider.getBalance(robinHood.address);
-      expect(ethBalanceAfter).to.equal(0);
+      expect(rETHBalance).to.be.greaterThan(0);
     });
   });
 });

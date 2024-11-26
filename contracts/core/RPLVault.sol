@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IOracle} from "../IOracle.sol";
 import {IVault} from "../IVault.sol";
-import {IRocketPoolRouter} from "./IRocketPoolRouter.sol";
+import {IRocketPoolRouter} from "../vendors/RocketPool/IRocketPoolRouter.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
@@ -48,7 +48,6 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
     function getRouter() external pure returns (address) {
         return _router;
     }
-
 
     function maxDeposit(address) public view virtual returns (uint256) {
         return type(uint256).max;
