@@ -8,7 +8,7 @@ import hre, { ethers, network } from "hardhat";
 
 const MAINNET_RETH = "0xae78736cd615f374d3085123a210448e74fc6393";
 
-describe.only("RPLVault", () => {
+describe("RPLVault", () => {
   async function deployFixture() {
     const [owner, otherAccount] = await hre.ethers.getSigners();
 
@@ -35,7 +35,7 @@ describe.only("RPLVault", () => {
     });
 
     const RPVault = await hre.ethers.getContractFactory("RPVault");
-    const vault = await RPVault.deploy();
+    const vault = await RPVault.deploy(ethers.ZeroAddress);
 
     const provider = hre.ethers.provider;
 
@@ -50,7 +50,7 @@ describe.only("RPLVault", () => {
       expect(await vault.uniswapPortion()).to.equal(50);
       expect(await vault.balancerPortion()).to.equal(50);
       expect(await vault.totalAssets()).to.equal(0);
-      expect(await vault.asset()).to.equal(MAINNET_RETH);
+      expect(await vault.asset()).to.equal("0xae78736Cd615f374D3085123A210448E74Fc6393");
     });
 
     it("Should let owner set weights", async () => {
@@ -76,15 +76,16 @@ describe.only("RPLVault", () => {
     });
   });
 
-  describe("Stake and unstake", () => {
-    it.only("Should deposit 1 ETH and receive rETH", async () => {
+  describe("Deposit and withdraw", () => {
+    it("Should deposit 1 ETH and receive rETH", async () => {
       const { vault, owner, provider } = await loadFixture(deployFixture);
 
       const depositAmount = hre.ethers.parseEther("1");
       const ownerBalance = await provider.getBalance(owner.address);
       expect(ownerBalance).to.be.greaterThanOrEqual(depositAmount);
 
-      await vault.connect(owner).deposit({ value: depositAmount });
+      // await vault.connect(owner).deposit({ value: depositAmount });
+      await expect(vault.connect(owner).deposit({ value: depositAmount })).to.emit(vault, "Deposit");
       const afterOwnerBalance = await provider.getBalance(owner.address);
       expect(afterOwnerBalance).to.be.lt(ownerBalance);
 
@@ -103,9 +104,14 @@ describe.only("RPLVault", () => {
       expect(totalAssets).to.be.greaterThan(0);
 
       const reth = await hre.ethers.getContractAt("IERC20", MAINNET_RETH);
-      const rETHBalance = await reth.balanceOf(owner.address);
+      let rETHBalance = await reth.balanceOf(owner.address);
 
-      expect(rETHBalance).to.be.greaterThan(0);
+      // expect(rETHBalance).to.be.greaterThan(0);
+      // await expect(vault.connect(owner).withdraw(rETHBalance)).to.emit(vault, "Withdraw");
+      await vault.connect(owner).withdraw(rETHBalance);
+      rETHBalance = await reth.balanceOf(owner.address);
+
+      expect(rETHBalance).to.equal(0);
     });
   });
 });

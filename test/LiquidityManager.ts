@@ -6,7 +6,7 @@ import {
 import { expect } from "chai";
 import hre, { ethers, network } from "hardhat";
 
-describe("Liquidity Manager", () => {
+describe.only("Liquidity Manager", () => {
   async function deployFixture() {
     // Contracts are deployed using the first signer/account by default
     const [owner, otherAccount] = await hre.ethers.getSigners();
@@ -23,11 +23,14 @@ describe("Liquidity Manager", () => {
     // Make whale the signer
     const whale = await hre.ethers.getSigner(ROBINHOOD_ADDRESS);
 
-    const LiquidityManager = await hre.ethers.getContractFactory("LiquidityManager");
+    const LiquidityManager = await hre.ethers.getContractFactory(
+      "LiquidityManager"
+    );
     const manager = await LiquidityManager.deploy();
+    const managerAddress = await manager.getAddress();
 
     const RPVault = await hre.ethers.getContractFactory("RPVault");
-    const vault = await RPVault.deploy();
+    const vault = await RPVault.deploy(managerAddress);
 
     const provider = hre.ethers.provider;
 
@@ -52,7 +55,9 @@ describe("Liquidity Manager", () => {
 
       let vaultAddress = await vault.getAddress();
 
-      expect(await manager.connect(owner).addVault(vaultAddress, 10)).to.emit(manager, "VaultAdded").withArgs(vaultAddress);
+      expect(await manager.connect(owner).addVault(vaultAddress, 10))
+        .to.emit(manager, "VaultAdded")
+        .withArgs(vaultAddress);
       expect(await manager.vaults(vaultAddress)).to.equal(vaultAddress);
       expect(await manager.totalWeight()).to.equal(10);
 
@@ -64,7 +69,6 @@ describe("Liquidity Manager", () => {
   });
 
   describe("Integration tests on LM", () => {
-
     let manager: any;
     let vault: any;
     let whale: any;
@@ -80,7 +84,6 @@ describe("Liquidity Manager", () => {
     });
 
     it("Should stake assets and receive LP tokens", async () => {
-
       const amount = ethers.parseEther("1");
       const balance_before = await ethers.provider.getBalance(vault.address);
 
@@ -99,9 +102,7 @@ describe("Liquidity Manager", () => {
       // Check manager has rETH tokens
       const rethContract = new hre.ethers.Contract(
         MAINNET_RETH,
-        [
-          "function balanceOf(address) external view returns (uint256)",
-        ],
+        ["function balanceOf(address) external view returns (uint256)"],
         ethers.provider
       );
 

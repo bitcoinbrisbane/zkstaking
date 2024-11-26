@@ -42,7 +42,7 @@ describe("Rocket Pool Integration", () => {
     });
 
     const RPVault = await hre.ethers.getContractFactory("RPVault");
-    const vault = await RPVault.deploy();
+    const vault = await RPVault.deploy(ethers.ZeroAddress);
 
     const provider = hre.ethers.provider;
 

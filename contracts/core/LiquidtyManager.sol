@@ -8,7 +8,6 @@ import {IVault} from "../IVault.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
-
     uint256 public unallocatedAssets;
     uint256 public allocatedAssets;
     uint256 public totalAssets;
@@ -23,13 +22,14 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
     mapping(address => mapping(address => uint256)) public balances;
 
     uint256 public totalWeight;
-    
-    constructor() Ownable(msg.sender) ERC20("OZ Eth", "ozETH") {
-    }
 
+    constructor() Ownable(msg.sender) ERC20("OZ Eth", "ozETH") {}
 
     function addVault(IVault vault, uint8 weight) external onlyOwner {
-        require(vaults[address(vault)] == address(0), "addVault: Vault already exists");
+        require(
+            vaults[address(vault)] == address(0),
+            "addVault: Vault already exists"
+        );
 
         vaults[address(vault)] = address(vault);
         weights.push(Weight(weight, address(vault)));
@@ -51,7 +51,7 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
         delete vaults[vaultId];
     }
 
-    function stake() external payable nonReentrant() {
+    function stake() external payable nonReentrant {
         require(msg.value > 0, "stake: Invalid amount");
         require(weights.length > 0, "stake: No vaults added");
         require(totalWeight > 0, "stake: Total weight is 0");
@@ -62,7 +62,7 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
 
             address _vault = weights[i].vault;
             assert(_vault != address(0));
-            
+
             IVault vault = IVault(_vault);
             vault.deposit{value: portion}();
 
@@ -76,10 +76,10 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
         emit Staked(msg.sender, msg.value);
     }
 
-    function unstake(uint256 amount) external nonReentrant() {
+    function unstake(uint256 amount) external nonReentrant {
         require(amount > 0, "unstake: Invalid amount");
         require(totalWeight > 0, "stake: Total weight is 0");
-        
+
         IERC20(address(this)).transferFrom(msg.sender, address(this), amount);
 
         // balances[poolId][msg.sender] -= amount;

@@ -16,6 +16,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         0x16D5A408e807db8eF7c578279BEeEe6b228f1c1C; // https://etherscan.io/address/0x16d5a408e807db8ef7c578279beeee6b228f1c1c#writeContract & https://github.com/rocket-pool/rocketpool-router/blob/master/src/RocketPoolRouter.ts#L25
     address private _oracle;
     address private immutable _self;
+    address private immutable _lm;
 
     uint256 public uniswapPortion;
     uint256 public balancerPortion;
@@ -72,11 +73,12 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         emit WeightsUpdated(uniswapPortion, balancerPortion);
     }
 
-    constructor() ERC20("ZK rETH", "zkrETH") Ownable(msg.sender) {
+    constructor(address lm) ERC20("ZK rETH", "zkrETH") Ownable(msg.sender) {
         uniswapPortion = 50;
         balancerPortion = 50;
         vestingPeriod = 1 days;
         _self = address(this);
+        _lm = lm;
 
         IERC20(_lpToken).approve(_router, type(uint256).max);
     }
@@ -112,7 +114,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         emit Deposit(sender, amount);
     }
 
-    function withdraw(uint256 assets) external {
+    function withdraw(uint256 assets) external onlyLM {
         require(assets > 0, "RPLVault: Invalid withdraw amount");
         require(
             balances[msg.sender] >= assets,
@@ -160,7 +162,7 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         (bool sent, ) = sender.call{value: delta}("");
         require(sent, "Failed to send Ether");
         
-        emit Withdrawn(delta, sender);
+        emit Withdraw(sender, delta);
     }
 
     function getLatestPrice() external view returns (int) {
@@ -175,11 +177,19 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         payable(owner()).transfer(address(this).balance);
     }
 
+    modifier onlyLM() {
+        // Allow anyone to call this function if the LM is not set
+        if (_lm == address(0)) {
+            return;
+        }
+
+        require(msg.sender == _lm, "RPLVault: Only LM");
+        _;
+    }
+
     receive() external payable {
         _deposit(msg.value, msg.sender);
     }
 
-    event Staked(uint256 amount);
     event WeightsUpdated(uint256 uniswapPortion, uint256 balancerPortion);
-    event Withdrawn(uint256 amount, address indexed sender);
 }
