@@ -121,8 +121,6 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
             "RPLVault: Insufficient balance"
         );
 
-        // TODO: this could go back to LM
-
         address payable sender = payable(msg.sender);
         _withdraw(assets, sender);
     }

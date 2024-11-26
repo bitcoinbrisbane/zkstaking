@@ -19,13 +19,14 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
 
     Weight[] public weights;
     mapping(address => address) public vaults;
+    mapping(address => address) public restakingPools;
     mapping(address => mapping(address => uint256)) public balances;
 
     uint256 public totalWeight;
 
     constructor() Ownable(msg.sender) ERC20("OZ Eth", "ozETH") {}
 
-    function addVault(IVault vault, uint8 weight) external onlyOwner {
+    function addVault(IVault vault, uint8 weight, address restakingPool) external onlyOwner {
         require(
             vaults[address(vault)] == address(0),
             "addVault: Vault already exists"
@@ -34,6 +35,10 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
         vaults[address(vault)] = address(vault);
         weights.push(Weight(weight, address(vault)));
         totalWeight += weight;
+
+        if (restakingPool != address(0)) {
+            restakingPools[address(vault)] = restakingPool;
+        }
 
         emit VaultAdded(address(vault));
     }
@@ -48,6 +53,7 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
             }
         }
 
+        delete restakingPools[vaultId];
         delete vaults[vaultId];
     }
 
