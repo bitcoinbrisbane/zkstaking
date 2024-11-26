@@ -75,9 +75,11 @@ describe.only("Liquidity Manager", () => {
 
     beforeEach(async () => {
       ({ manager, whale } = await loadFixture(deployFixture));
-      const RPVault = await ethers.getContractFactory("RPVault");
-      const vault = await RPVault.deploy();
 
+      const managerAddress = await manager.getAddress();
+      const RPVault = await ethers.getContractFactory("RPVault");
+
+      const vault = await RPVault.deploy(managerAddress);
       const vaultAddress = await vault.getAddress();
 
       await manager.connect(manager.owner()).addVault(vaultAddress, 10);
@@ -85,7 +87,8 @@ describe.only("Liquidity Manager", () => {
 
     it("Should stake assets and receive LP tokens", async () => {
       const amount = ethers.parseEther("1");
-      const balance_before = await ethers.provider.getBalance(vault.address);
+      const balanceBefore = await ethers.provider.getBalance(vault.address);
+      expect(balanceBefore).to.equal(0);
 
       await manager.connect(whale).stake({ value: amount });
 
@@ -94,7 +97,7 @@ describe.only("Liquidity Manager", () => {
       expect(await manager.totalAssets()).to.equal(amount);
       expect(await manager.balanceOf(whale.address)).to.equal(amount);
 
-      const balance_after = await ethers.provider.getBalance(vault.address);
+      const balanceAfter = await ethers.provider.getBalance(vault.address);
       // expect(balance_after).to.be.gt(balance_before);
 
       const MAINNET_RETH = "0xae78736cd615f374d3085123a210448e74fc6393";
