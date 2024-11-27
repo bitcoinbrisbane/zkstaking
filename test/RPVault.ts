@@ -1,7 +1,4 @@
-import {
-  time,
-  loadFixture,
-} from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 
 import { expect } from "chai";
 import hre, { ethers, network } from "hardhat";
@@ -43,14 +40,16 @@ describe("RPLVault", () => {
   }
 
   describe("Deployment", () => {
-    it("Should setup the vault", async () => {
+    it("Should correctly deploy the vault", async () => {
       const { vault, owner } = await loadFixture(deployFixture);
 
       expect(await vault.owner()).to.equal(owner.address);
       expect(await vault.uniswapPortion()).to.equal(50);
       expect(await vault.balancerPortion()).to.equal(50);
       expect(await vault.totalAssets()).to.equal(0);
-      expect(await vault.asset()).to.equal("0xae78736Cd615f374D3085123A210448E74Fc6393");
+      expect(await vault.asset()).to.equal(
+        "0xae78736Cd615f374D3085123A210448E74Fc6393"
+      );
     });
 
     it("Should let owner set weights", async () => {
@@ -85,7 +84,9 @@ describe("RPLVault", () => {
       expect(ownerBalance).to.be.greaterThanOrEqual(depositAmount);
 
       // await vault.connect(owner).deposit({ value: depositAmount });
-      await expect(vault.connect(owner).deposit({ value: depositAmount })).to.emit(vault, "Deposit");
+      await expect(
+        vault.connect(owner).deposit({ value: depositAmount })
+      ).to.emit(vault, "Deposit");
       const afterOwnerBalance = await provider.getBalance(owner.address);
       expect(afterOwnerBalance).to.be.lt(ownerBalance);
 
