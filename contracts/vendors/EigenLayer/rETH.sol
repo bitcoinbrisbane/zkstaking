@@ -6,6 +6,7 @@ import {IStrategy} from "./IStrategy.sol";
 import {IRestake} from "../../IRestake.sol";
 import {IStrategyManager} from "./IEigenLayer.sol";
 import {IDelegationManger} from "./IEigenLayer.sol";
+import {IVault} from "../../IVault.sol";
 
 contract rETH is IRestake {
     address private constant _lpToken =
@@ -19,10 +20,17 @@ contract rETH is IRestake {
     address public constant strategy =
         0x1BeE69b7dFFfA4E2d53C2a2Df135C388AD25dCD2; // rpl strategy
 
-    function stake(uint256 amount) external {
-        require(amount > 0, "stake: Cannot stake 0");
-        IERC20(_lpToken).transferFrom(msg.sender, address(this), amount);
-        IERC20(_lpToken).approve(strategyManager, amount);
+    address private immutable _self;
+    // IVault public immutable vault;
+
+    constructor() {
+        _self = address(this);
+        // vault = IVault(_vault);
+    }
+
+    function restake(uint256 amount) external {
+        require(amount > 0, "restake: No assets to stake");
+        assert(IERC20(_lpToken).balanceOf(_self) >= amount);
 
         IStrategyManager(strategyManager).depositIntoStrategy(
             strategy,
@@ -30,14 +38,14 @@ contract rETH is IRestake {
             amount
         );
 
-        emit Staked(msg.sender, amount);
+        emit Restaked(amount);
     }
 
-    function unstake() external {
+    function queueUnstake() external {
         uint256 shares = IStrategy(strategy).sharesToUnderlying(
-            IERC20(_lpToken).balanceOf(address(this))
+            IERC20(_lpToken).balanceOf(_self)
         );
-        require(shares > 0, "unstake: No shares to withdraw");
+        require(shares > 0, "queueUnstake: No shares to withdraw");
 
         IDelegationManger.QueuedWithdrawalParams
             memory queuedWithdrawalParam = IDelegationManger
@@ -54,12 +62,16 @@ contract rETH is IRestake {
             memory queuedWithdrawalParams = new IDelegationManger.QueuedWithdrawalParams[](
                 1
             );
+
         queuedWithdrawalParams[0] = queuedWithdrawalParam;
         IDelegationManger(delegationManager).queueWithdrawals(
             queuedWithdrawalParams
         );
+    }
+
+    function unstake() external {
         IDelegationManger(delegationManager).completeWithdrawal();
 
-        emit Unstaked(msg.sender, IERC20(_lpToken).balanceOf(address(this)));
+        emit Unstaked(IERC20(_lpToken).balanceOf(_self));
     }
 }

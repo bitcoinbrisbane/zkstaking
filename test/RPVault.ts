@@ -107,8 +107,6 @@ describe("RPLVault", () => {
       const reth = await hre.ethers.getContractAt("IERC20", MAINNET_RETH);
       let rETHBalance = await reth.balanceOf(owner.address);
 
-      // expect(rETHBalance).to.be.greaterThan(0);
-      // await expect(vault.connect(owner).withdraw(rETHBalance)).to.emit(vault, "Withdraw");
       await vault.connect(owner).withdraw(rETHBalance);
       rETHBalance = await reth.balanceOf(owner.address);
 

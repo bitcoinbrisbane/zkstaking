@@ -6,9 +6,9 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IVault} from "../IVault.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {IRestake} from "../IRestake.sol";
 
 contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
-    uint256 public unallocatedAssets;
     uint256 public allocatedAssets;
     uint256 public totalAssets;
 
@@ -23,8 +23,11 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
     mapping(address => mapping(address => uint256)) public balances;
 
     uint256 public totalWeight;
+    address private immutable _self;
 
-    constructor() Ownable(msg.sender) ERC20("OZ Eth", "ozETH") {}
+    constructor() Ownable(msg.sender) ERC20("OZ Eth", "ozETH") {
+        _self = address(this);
+    }
 
     function addVault(IVault vault, uint8 weight, address restakingPool) external onlyOwner {
         require(
@@ -56,6 +59,8 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
 
         delete restakingPools[vaultId];
         delete vaults[vaultId];
+
+        emit VaultRemoved(vaultId);
     }
 
     function stake() external payable nonReentrant {
@@ -66,6 +71,7 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
         uint256 amount = msg.value;
         for (uint i = 0; i < weights.length; i++) {
             uint256 portion = (amount * weights[i].weight) / totalWeight;
+            // uint portion = amount;
 
             address _vault = weights[i].vault;
             assert(_vault != address(0));
@@ -74,10 +80,20 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
             vault.deposit{value: portion}();
 
             balances[_vault][msg.sender] += msg.value;
+
+            if (restakingPools[_vault] != address(0)) {
+                // uint256 beforeBalance = IERC20(vault.asset()).balanceOf(_self);
+                uint256 beforeBalance = vault.totalAssets();
+                IVault(_vault).withdrawShares();
+            //     uint256 afterBalance = IERC20(vault.asset()).balanceOf(_self);
+            //     require(afterBalance >= beforeBalance, "stake: Withdraw failed");
+            //     uint256 delta = afterBalance - beforeBalance;
+
+            //     // IRestake(restakingPools[_vault]).restake(delta);
+            }
         }
 
         totalAssets += amount;
-        unallocatedAssets += amount;
         _mint(msg.sender, amount);
 
         emit Staked(msg.sender, msg.value);
@@ -85,13 +101,12 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
 
     function unstake(uint256 amount) external nonReentrant {
         require(amount > 0, "unstake: Invalid amount");
-        require(totalWeight > 0, "stake: Total weight is 0");
+        require(totalWeight > 0, "unstake: Total weight is 0");
 
-        IERC20(address(this)).transferFrom(msg.sender, address(this), amount);
+        IERC20(_self).transferFrom(msg.sender, _self, amount);
 
         // balances[poolId][msg.sender] -= amount;
         totalAssets -= amount;
-        unallocatedAssets -= amount;
 
         _burn(msg.sender, amount);
         payable(msg.sender).transfer(amount);
@@ -102,4 +117,5 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
     event Staked(address indexed account, uint256 amount);
     event Unstaked(address indexed account, uint256 amount);
     event VaultAdded(address indexed vault);
+    event VaultRemoved(address indexed vault);
 }

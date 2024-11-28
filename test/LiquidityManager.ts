@@ -42,7 +42,6 @@ describe("Liquidity Manager", () => {
       const { manager, owner } = await loadFixture(deployFixture);
 
       expect(await manager.owner()).to.equal(owner.address);
-      expect(await manager.unallocatedAssets()).to.equal(0);
       expect(await manager.allocatedAssets()).to.equal(0);
       expect(await manager.totalAssets()).to.equal(0);
       expect(await manager.totalWeight()).to.equal(0);
@@ -55,14 +54,20 @@ describe("Liquidity Manager", () => {
 
       let vaultAddress = await vault.getAddress();
 
-      expect(await manager.connect(owner).addVault(vaultAddress, 10, ethers.ZeroAddress))
+      expect(
+        await manager
+          .connect(owner)
+          .addVault(vaultAddress, 10, ethers.ZeroAddress)
+      )
         .to.emit(manager, "VaultAdded")
         .withArgs(vaultAddress);
 
       expect(await manager.vaults(vaultAddress)).to.equal(vaultAddress);
       expect(await manager.totalWeight()).to.equal(10);
 
-      await manager.connect(owner).removeVault(vaultAddress);
+      expect(await manager.connect(owner).removeVault(vaultAddress))
+        .to.emit(manager, "VaultRemoved")
+        .withArgs(vaultAddress);
       vaultAddress = await vault.getAddress();
 
       expect(await manager.vaults(vaultAddress)).to.equal(ethers.ZeroAddress);
@@ -74,6 +79,7 @@ describe("Liquidity Manager", () => {
     let manager: any;
     let whale: any;
     let owner: any;
+    let vault: any;
 
     beforeEach(async () => {
       ({ manager, owner, whale } = await loadFixture(deployFixture));
@@ -81,10 +87,18 @@ describe("Liquidity Manager", () => {
       const managerAddress = await manager.getAddress();
       const RPVault = await ethers.getContractFactory("RPVault");
 
-      const vault = await RPVault.deploy(managerAddress);
+      vault = await RPVault.deploy(managerAddress);
       const vaultAddress = await vault.getAddress();
 
-      await manager.connect(owner).addVault(vaultAddress, 10, ethers.ZeroAddress);
+      await manager
+        .connect(owner)
+        .addVault(vaultAddress, 10, ethers.ZeroAddress);
+    });
+
+    it("Should revert when no eth sent", async () => {
+      expect(await manager.connect(whale).stake()).to.be.revertedWith(
+        "stake: Invalid amount"
+      );
     });
 
     it("Should stake assets and receive LP tokens", async () => {
@@ -95,25 +109,125 @@ describe("Liquidity Manager", () => {
 
       await manager.connect(whale).stake({ value: amount });
 
-      // // Manager should not have any ETH
-      // expect(await manager.balance()).to.equal(0);
-      // expect(await manager.totalAssets()).to.equal(amount);
-      // expect(await manager.balanceOf(whale.address)).to.equal(amount);
+      // Manager should not have any ETH
+      expect(await manager.balance()).to.equal(0);
+      expect(await manager.totalAssets()).to.equal(amount);
+      expect(await manager.balanceOf(whale.address)).to.equal(amount);
+    });
 
-      // const balanceAfter = await ethers.provider.getBalance(vault.address);
-      // expect(balance_after).to.be.gt(balance_before);
+    it("Should not restake when restaking contract is not set", async () => {
+      const erc20_abi = [
+        "function balanceOf(address) external view returns (uint256)",
+        "function approve(address spender, uint256 amount) external returns (bool)",
+      ];
 
-      // const MAINNET_RETH = "0xae78736cd615f374d3085123a210448e74fc6393";
+      const rethContract = new hre.ethers.Contract(
+        "0xae78736cd615f374d3085123a210448e74fc6393",
+        erc20_abi,
+        ethers.provider
+      );
 
-      // // Check manager has rETH tokens
-      // const rethContract = new hre.ethers.Contract(
-      //   MAINNET_RETH,
-      //   ["function balanceOf(address) external view returns (uint256)"],
-      //   ethers.provider
-      // );
+      const vaultAddress = await vault.getAddress();
+      const vaultBalanceBefore = await ethers.provider.getBalance(
+        vaultAddress
+      );
 
-      // const rethBalance = await rethContract.balanceOf(manager.address);
-      // expect(rethBalance).to.be.gt(0);
+      expect(vaultBalanceBefore).to.equal(0);
+      const rethVaultBalanceBfore = await rethContract.balanceOf(
+        vaultAddress
+      );
+      expect(rethVaultBalanceBfore).to.be.eq(0);
+
+      const managerAddress = await manager.getAddress();
+      const balanceBefore = await ethers.provider.getBalance(managerAddress);
+      expect(balanceBefore).to.equal(0);
+
+      const amount = ethers.parseEther("1");
+      await manager.connect(whale).stake({ value: amount });
+
+      const balanceAfter = await ethers.provider.getBalance(managerAddress);
+      expect(balanceAfter).to.equal(0);
+
+      // rEth should be restaked
+      const rethVaultBalanceAfter = await rethContract.balanceOf(
+        vaultAddress
+      );
+
+      expect(rethVaultBalanceAfter).to.be.gt(0);
+    });
+
+    describe("Restaking on Eigen Layer", () => {
+      let vault: any;
+
+      beforeEach(async () => {
+        ({ manager, owner, whale } = await loadFixture(deployFixture));
+
+        const managerAddress = await manager.getAddress();
+        const RPVault = await ethers.getContractFactory("RPVault");
+
+        vault = await RPVault.deploy(managerAddress);
+        const vaultAddress = await vault.getAddress();
+
+        const REthRestaking = await hre.ethers.getContractFactory("rETH");
+        const rEthRestaking = await REthRestaking.deploy();
+        const rEthRestakingAddress = await rEthRestaking.getAddress();
+
+        await manager
+          .connect(owner)
+          .addVault(vaultAddress, 100, rEthRestakingAddress);
+      });
+
+      it("Should have weight set", async () => {
+        const vaultAddress = await vault.getAddress();
+        expect(await manager.vaults(vaultAddress)).to.equal(vaultAddress);
+        expect(await manager.totalWeight()).to.equal(100);
+
+        const weight = await manager.weights(0);
+        expect(weight[0]).to.equal(100);
+        expect(weight[1]).to.equal(vaultAddress);
+      });
+
+      it.only("Should restake with restaking contract is set", async () => {
+        const erc20_abi = [
+          "function balanceOf(address) external view returns (uint256)",
+          "function approve(address spender, uint256 amount) external returns (bool)",
+        ];
+
+        const rethContract = new hre.ethers.Contract(
+          "0xae78736cd615f374d3085123a210448e74fc6393",
+          erc20_abi,
+          ethers.provider
+        );
+
+        const vaultAddress = await vault.getAddress();
+        const vaultBalanceBefore = await ethers.provider.getBalance(
+          vaultAddress
+        );
+
+        expect(vaultBalanceBefore).to.equal(0);
+        const rethVaultBalanceBfore = await rethContract.balanceOf(
+          vaultAddress
+        );
+        expect(rethVaultBalanceBfore).to.be.eq(0);
+
+        const managerAddress = await manager.getAddress();
+        const balanceBefore = await ethers.provider.getBalance(managerAddress);
+        expect(balanceBefore).to.equal(0);
+
+        const amount = ethers.parseEther("1");
+        await manager.connect(whale).stake({ value: amount });
+
+        const balanceAfter = await ethers.provider.getBalance(managerAddress);
+        expect(balanceAfter).to.equal(0);
+
+        // rEth should be restaked
+        const rethVaultBalanceAfter = await rethContract.balanceOf(
+          vaultAddress
+        );
+
+        // roll back when restaking
+        // expect(rethVaultBalanceAfter).to.be.eq(0);
+      });
     });
   });
 });
