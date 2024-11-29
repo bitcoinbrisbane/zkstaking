@@ -8,6 +8,9 @@ import {IVault} from "../IVault.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IRestake} from "../IRestake.sol";
 
+// add hardhat console.log
+import "hardhat/console.sol";
+
 contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
     uint256 public allocatedAssets;
     uint256 public totalAssets;
@@ -85,11 +88,13 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
                 uint256 beforeBalance = vault.totalAssets();
                 IVault(_vault).withdrawShares();
                 uint256 afterBalance = vault.totalAssets();
-                require(afterBalance >= beforeBalance, "stake: Withdraw failed");
-                uint256 delta = afterBalance - beforeBalance;
+                require(beforeBalance > afterBalance, "stake: Withdraw failed");
+                
+                uint256 delta = beforeBalance - afterBalance;
+                console.log("delta: %s", delta);
                 assert(delta > 0);
 
-                IRestake(restakingPools[_vault]).restake(delta);
+                // IRestake(restakingPools[_vault]).restake(delta);
             }
         }
 

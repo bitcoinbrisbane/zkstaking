@@ -165,8 +165,9 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         // Decrement the users balance
         balances[msg.sender] -= amount;
 
+        IERC20(_lpToken).transfer(sender, amount);
+
         // Burn the users shares
-        IERC20(_lpToken).transferFrom(sender, _self, amount);
         _burn(msg.sender, amount);
 
         (bool sent, ) = sender.call{value: delta}("");
