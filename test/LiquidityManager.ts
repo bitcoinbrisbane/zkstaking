@@ -225,8 +225,7 @@ describe("Liquidity Manager", () => {
           vaultAddress
         );
 
-        // roll back when restaking
-        // expect(rethVaultBalanceAfter).to.be.eq(0);
+        expect(rethVaultBalanceAfter).to.be.gt(0);
       });
     });
   });

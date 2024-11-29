@@ -8,7 +8,6 @@ interface IERC4626Partial {
 
 interface IVault is IERC4626Partial {
     function getOracle() external view returns (address);
-    
     function deposit() external payable;
     function withdraw(uint256 assets) external;
     function withdrawShares() external;

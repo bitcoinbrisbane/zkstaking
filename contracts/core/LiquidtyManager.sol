@@ -82,14 +82,14 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
             balances[_vault][msg.sender] += msg.value;
 
             if (restakingPools[_vault] != address(0)) {
-                // uint256 beforeBalance = IERC20(vault.asset()).balanceOf(_self);
                 uint256 beforeBalance = vault.totalAssets();
                 IVault(_vault).withdrawShares();
-            //     uint256 afterBalance = IERC20(vault.asset()).balanceOf(_self);
-            //     require(afterBalance >= beforeBalance, "stake: Withdraw failed");
-            //     uint256 delta = afterBalance - beforeBalance;
+                uint256 afterBalance = vault.totalAssets();
+                require(afterBalance >= beforeBalance, "stake: Withdraw failed");
+                uint256 delta = afterBalance - beforeBalance;
+                assert(delta > 0);
 
-            //     // IRestake(restakingPools[_vault]).restake(delta);
+                IRestake(restakingPools[_vault]).restake(delta);
             }
         }
 

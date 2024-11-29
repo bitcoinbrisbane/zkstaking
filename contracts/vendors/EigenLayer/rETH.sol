@@ -21,11 +21,9 @@ contract rETH is IRestake {
         0x1BeE69b7dFFfA4E2d53C2a2Df135C388AD25dCD2; // rpl strategy
 
     address private immutable _self;
-    // IVault public immutable vault;
 
     constructor() {
         _self = address(this);
-        // vault = IVault(_vault);
     }
 
     function restake(uint256 amount) external {
