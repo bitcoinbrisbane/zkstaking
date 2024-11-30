@@ -168,7 +168,7 @@ describe("Liquidity Manager", () => {
         vault = await RPVault.deploy(managerAddress);
         const vaultAddress = await vault.getAddress();
 
-        const REthRestaking = await hre.ethers.getContractFactory("rETH");
+        const REthRestaking = await hre.ethers.getContractFactory("EigenLayerMock");
         const rEthRestaking = await REthRestaking.deploy();
         const rEthRestakingAddress = await rEthRestaking.getAddress();
 
