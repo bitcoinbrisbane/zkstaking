@@ -74,8 +74,6 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
         uint256 amount = msg.value;
         for (uint i = 0; i < weights.length; i++) {
             uint256 portion = (amount * weights[i].weight) / totalWeight;
-            // uint portion = amount;
-
             address _vault = weights[i].vault;
             assert(_vault != address(0));
 
@@ -94,7 +92,7 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
                 console.log("delta: %s", delta);
                 assert(delta > 0);
 
-                // IRestake(restakingPools[_vault]).restake(delta);
+                IRestake(restakingPools[_vault]).restake(delta);
             }
         }
 
