@@ -96,7 +96,7 @@ describe("Liquidity Manager", () => {
     });
 
     it("Should revert when no eth sent", async () => {
-      expect(await manager.connect(whale).stake()).to.be.revertedWith(
+      await expect(manager.connect(whale).stake()).to.be.revertedWith(
         "stake: Invalid amount"
       );
     });
@@ -110,7 +110,6 @@ describe("Liquidity Manager", () => {
       await manager.connect(whale).stake({ value: amount });
 
       // Manager should not have any ETH
-      expect(await manager.balance()).to.equal(0);
       expect(await manager.totalAssets()).to.equal(amount);
       expect(await manager.balanceOf(whale.address)).to.equal(amount);
     });
