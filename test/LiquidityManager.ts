@@ -187,7 +187,7 @@ describe("Liquidity Manager", () => {
         expect(weight[1]).to.equal(vaultAddress);
       });
 
-      it.only("Should restake with restaking contract is set", async () => {
+      it("Should restake with restaking contract is set", async () => {
         const erc20_abi = [
           "function balanceOf(address) external view returns (uint256)",
           "function approve(address spender, uint256 amount) external returns (bool)",
