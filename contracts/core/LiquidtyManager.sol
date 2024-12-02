@@ -28,7 +28,7 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
     uint256 public totalWeight;
     address private immutable _self;
 
-    constructor() Ownable(msg.sender) ERC20("OZ Eth", "ozETH") {
+    constructor(string name, string symbol) Ownable(msg.sender) ERC20(name, symbol) {
         _self = address(this);
     }
 
@@ -107,14 +107,16 @@ contract LiquidityManager is ERC20, Ownable, ReentrancyGuard {
         require(totalWeight > 0, "unstake: Total weight is 0");
 
         IERC20(_self).transferFrom(msg.sender, _self, amount);
-
-        // balances[poolId][msg.sender] -= amount;
         totalAssets -= amount;
 
         _burn(msg.sender, amount);
         payable(msg.sender).transfer(amount);
 
         emit Unstaked(msg.sender, amount);
+    }
+
+    function selfdestruct() external onlyOwner {
+        selfdestruct(payable(owner()));
     }
 
     event Staked(address indexed account, uint256 amount);

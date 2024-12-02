@@ -4,7 +4,7 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const LiquidityManagerModule = buildModule("LiquidityManagerModule", (m) => {
-  const lm = m.contract("LiquidityManager", [], {});
+  const lm = m.contract("LiquidityManager", ["Test", "Test"], {});
 
   return { lm };
 });

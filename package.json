@@ -10,7 +10,10 @@
     "test": "hardhat test",
     "coverage": "hardhat coverage",
     "verify": "hardhat verify",
-    "deploy:token": "npx hardhat ignition deploy ignition/modules/TokenModule.ts --network sepolia"
+    "deploy:token:sepolia": "npx hardhat ignition deploy ignition/modules/TokenModule.ts --network sepolia",
+    "deploy:token": "npx hardhat ignition deploy ignition/modules/TokenModule.ts --network main",
+    "deploy:lm": "npx hardhat ignition deploy ignition/modules/LiquidityManagerModule.ts --network main",
+    "deploy:rp": "npx hardhat ignition deploy ignition/modules/RewardPoolModule.ts --network main"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",

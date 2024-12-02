@@ -198,6 +198,10 @@ contract RPVault is ERC20, IVault, Ownable, ReentrancyGuard {
         _;
     }
 
+    function selfdestruct() external onlyOwner {
+        selfdestruct(payable(owner()));
+    }
+
     receive() external payable {
         _deposit(msg.value, msg.sender);
     }

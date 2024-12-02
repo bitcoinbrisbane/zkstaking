@@ -25,7 +25,7 @@ describe("Liquidity Manager", () => {
     const LiquidityManager = await hre.ethers.getContractFactory(
       "LiquidityManager"
     );
-    const manager = await LiquidityManager.deploy();
+    const manager = await LiquidityManager.deploy("OZ Eth", "ozETH");
     const managerAddress = await manager.getAddress();
 
     const RPVault = await hre.ethers.getContractFactory("RPVault");

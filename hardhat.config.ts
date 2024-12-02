@@ -43,6 +43,10 @@ const config: HardhatUserConfig = {
       url: process.env.SEPOLIA_NODE as string,
       accounts: [SEPOLIA_PK as string],
     },
+    mainnet: {
+      url: process.env.MAINNET_NODE as string,
+      accounts: [PK as string],
+    },
   },
 };
 
